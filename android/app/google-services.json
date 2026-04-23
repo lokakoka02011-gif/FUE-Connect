@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "775315883248",
+    "firebase_url": "https://fue-connect-f5213-default-rtdb.firebaseio.com",
+    "project_id": "fue-connect-f5213",
+    "storage_bucket": "fue-connect-f5213.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:775315883248:android:4549991665a0401e28ee35",
+        "android_client_info": {
+          "package_name": "com.example.fue_connect"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "775315883248-frvh6gsggad5l5dlkl8p05fl75vkf96c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6IGi1PgG4vUtMFlVgEMEYe1EoqMqTvJk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "775315883248-frvh6gsggad5l5dlkl8p05fl75vkf96c.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
