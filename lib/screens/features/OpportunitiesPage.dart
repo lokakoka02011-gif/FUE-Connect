@@ -12,12 +12,15 @@ class OpportunitiesPage extends StatelessWidget {
         appBar: AppBar(
           title: const Text("Opportunities"),
           bottom: const TabBar(
+            // --- UPDATED TAB COLORS ---
+            labelColor: Colors.white, // Active icon and text
+            unselectedLabelColor: Colors.white70, // High-contrast grey-white for inactive
+            indicatorColor: Colors.white,
+            labelStyle: TextStyle(fontWeight: FontWeight.bold),
             tabs: [
               Tab(text: "Internships", icon: Icon(Icons.school_outlined)),
               Tab(text: "Jobs", icon: Icon(Icons.work_outline)),
             ],
-            indicatorColor: Colors.white,
-            labelStyle: TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
         body: TabBarView(
@@ -32,24 +35,22 @@ class OpportunitiesPage extends StatelessWidget {
 
   Widget _buildOpportunityList(String filterType) {
     return StreamBuilder<QuerySnapshot>(
-      // Listening to your 'Opportunity' collection
       stream: FirebaseFirestore.instance.collection('Opportunity').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(child: Text("Error loading opportunities"));
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xffb1170c)));
+          return const Center(
+              child: CircularProgressIndicator(color: Color(0xffb1170c)));
         }
 
         // Filtering logic: Check 'Type' field against 'job' or 'internship'
         final docs = snapshot.data!.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>?;
-          if (data == null || !data.containsKey('Type')) {
-            return false; 
-          }
+          if (data == null || !data.containsKey('Type')) return false;
 
-          final typeField = doc['Type'].toString().toLowerCase();
+          final typeField = data['Type'].toString().toLowerCase();
           return typeField == filterType;
         }).toList();
 
@@ -60,8 +61,8 @@ class OpportunitiesPage extends StatelessWidget {
               children: [
                 Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
                 const SizedBox(height: 10),
-                Text("No $filterType available right now", 
-                     style: const TextStyle(color: Colors.grey)),
+                Text("No $filterType available right now",
+                    style: const TextStyle(color: Colors.grey)),
               ],
             ),
           );
@@ -72,23 +73,26 @@ class OpportunitiesPage extends StatelessWidget {
           itemCount: docs.length,
           itemBuilder: (context, index) {
             final data = docs[index].data() as Map<String, dynamic>;
-            
+
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 title: Text(
-                  data['Title'] ?? 'Untitled',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                  (data['Title'] ?? 'Untitled').toString(),
+                  style:
+                      const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 6),
                     Text(
-                      data['Description'] ?? '',
+                      (data['Description'] ?? '').toString(),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Colors.grey[700]),
@@ -98,13 +102,18 @@ class OpportunitiesPage extends StatelessWidget {
                       children: [
                         const Icon(Icons.money, size: 16, color: Colors.green),
                         const SizedBox(width: 4),
-                        Text(data['Pay'] ?? 'N/A', 
-                             style: const TextStyle(fontWeight: FontWeight.w600)),
+                        Text(
+                          "Salary: ${(data['Pay'] ?? 'N/A')} EGP",
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                         const Spacer(),
-                        const Icon(Icons.timer_outlined, size: 16, color: Color(0xffb1170c)),
+                        const Icon(Icons.timer_outlined,
+                            size: 16, color: Color(0xffb1170c)),
                         const SizedBox(width: 4),
-                        Text("Until: ${data['Deadline']}", 
-                             style: const TextStyle(fontSize: 12)),
+                        Text(
+                          "Until: ${_formatTimestamp(data['Deadline'])}",
+                          style: const TextStyle(fontSize: 12),
+                        ),
                       ],
                     ),
                   ],
@@ -137,22 +146,32 @@ class OpportunitiesPage extends StatelessWidget {
               child: Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
             const SizedBox(height: 20),
-            Text(data['Title'], style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text((data['Title'] ?? 'Opportunity').toString(),
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            _detailRow(Icons.payments, "Salary/Pay: ", data['Pay']),
-            _detailRow(Icons.person, "Staff Reference: ", data['staffRef']),
+            _detailRow(Icons.payments, "Salary: ",
+                "${(data['Pay'] ?? 'N/A')} EGP"),
+            _detailRow(Icons.person, "Staff: ",
+                (data['staffRef'] ?? 'N/A').toString()),
+            _detailRow(Icons.calendar_today, "Deadline: ", 
+                _formatTimestamp(data['Deadline'])),
             const Divider(height: 30),
-            const Text("Description", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text("Description",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 5),
-            Text(data['Description'] ?? 'No description provided.'),
+            Text((data['Description'] ?? 'No description provided.').toString()),
             const SizedBox(height: 20),
-            const Text("Requirements", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text("Requirements",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 5),
-            Text(data['Requirments'] ?? 'No specific requirements.'),
+            Text((data['Requirments'] ?? 'No specific requirements.').toString()),
             const SizedBox(height: 30),
             SizedBox(
               width: double.infinity,
@@ -160,13 +179,14 @@ class OpportunitiesPage extends StatelessWidget {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xffb1170c),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () {
                   // Link application logic here
                 },
-                child: const Text("Apply for this Opportunity", 
-                           style: TextStyle(color: Colors.white, fontSize: 16)),
+                child: const Text("Apply for this Opportunity",
+                    style: TextStyle(color: Colors.white, fontSize: 16)),
               ),
             ),
             const SizedBox(height: 10),
@@ -176,7 +196,7 @@ class OpportunitiesPage extends StatelessWidget {
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String? value) {
+  Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -184,9 +204,19 @@ class OpportunitiesPage extends StatelessWidget {
           Icon(icon, size: 18, color: Colors.grey),
           const SizedBox(width: 8),
           Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
         ],
       ),
     );
+  }
+
+  // HELPER: Formats Firestore Timestamp to readable DD/MM/YYYY
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'N/A';
+    if (timestamp is Timestamp) {
+      DateTime date = timestamp.toDate();
+      return "${date.day}/${date.month}/${date.year}";
+    }
+    return timestamp.toString();
   }
 }

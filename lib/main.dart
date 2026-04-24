@@ -18,7 +18,8 @@ import 'package:fue_connect/screens/features/VolunteerPage.dart';
 import 'package:fue_connect/screens/features/NotificationPage.dart';
 import 'package:fue_connect/screens/auth/login_screen.dart';
 import 'package:fue_connect/screens/features/SupportPage.dart';
-import 'package:fue_connect/screens/features/OpportunitiesPage.dart'; // RE-ADDED
+import 'package:fue_connect/screens/features/OpportunitiesPage.dart'; 
+import 'package:fue_connect/screens/features/AboutUsPage.dart'; // ADDED
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,10 +57,11 @@ class MyApp extends StatelessWidget {
         '/clubs': (context) => const ClubsPage(),
         '/events': (context) => const EventsPage(),
         '/volunteer': (context) => const VolunteerPage(),
-        '/opportunities': (context) => const OpportunitiesPage(), // FIXED: Points to Hub
+        '/opportunities': (context) => const OpportunitiesPage(),
         '/internships': (context) => const InternshipsPage(),
         '/notification': (context) => const NotificationPage(),
         '/support': (context) => const SupportPage(), 
+        '/about': (context) => const AboutUsPage(), // ADDED
       },
     );
   }
@@ -168,6 +170,11 @@ class _MainPageState extends State<MainPage> {
                   _buildMenuItem(Icons.calendar_month_outlined, "Academic Calendar", () {}),
                   const Divider(),
                   _buildMenuItem(Icons.bookmark_border, "Saved Items", () {}),
+                  // ADDED: About Us Item
+                  _buildMenuItem(Icons.info_outline_rounded, "About FUE Connect", () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/about');
+                  }),
                   _buildMenuItem(Icons.support_agent_rounded, "Support & FAQs", () {
                     Navigator.pop(context);
                     Navigator.pushNamed(context, '/support'); 
