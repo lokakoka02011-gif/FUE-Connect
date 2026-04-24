@@ -6,6 +6,11 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  // 1. ADDED: Initializing GoogleSignIn with your specific Client ID for Web support
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    clientId: '775315883248-frvh6gsggad5l5dlkl8p05fl75vkf96c.apps.googleusercontent.com',
+  );
+
   // Get current user
   User? get currentUser => _auth.currentUser;
 
@@ -20,14 +25,12 @@ class AuthService {
     required String lastName,
   }) async {
     try {
-      // Create user in Firebase Auth
       UserCredential userCredential =
           await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Save user data to Firestore
       await _db.collection('users').doc(userCredential.user!.uid).set({
         'firstName': firstName,
         'lastName': lastName,
@@ -60,8 +63,9 @@ class AuthService {
   // ── GOOGLE SIGN-IN ───────────────────────────────────
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return null; // User cancelled
+      // 2. UPDATED: Using the initialized _googleSignIn instance
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null; 
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
@@ -74,7 +78,6 @@ class AuthService {
       UserCredential userCredential =
           await _auth.signInWithCredential(credential);
 
-      // Save to Firestore if first time
       final doc =
           await _db.collection('users').doc(userCredential.user!.uid).get();
 
@@ -96,7 +99,8 @@ class AuthService {
 
   // ── SIGN OUT ─────────────────────────────────────────
   Future<void> signOut() async {
-    await GoogleSignIn().signOut(); // Also sign out from Google
+    // 3. UPDATED: Using the same instance for sign out
+    await _googleSignIn.signOut(); 
     await _auth.signOut();
   }
 

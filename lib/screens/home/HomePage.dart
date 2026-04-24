@@ -8,7 +8,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // 1. Declare the controller here
   late PageController _pageController;
 
   @override
@@ -19,11 +18,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    // 2. ALWAYS dispose your controllers to avoid memory leaks
     _pageController.dispose();
     super.dispose();
   }
 
+  // List of recommended items at the bottom
   final List<Map<String, dynamic>> recommendedItems = const [
     {
       "type": "volunteer",
@@ -40,11 +39,11 @@ class _HomePageState extends State<HomePage> {
       "route": "/events",
     },
     {
-      "type": "internship",
+      "type": "opportunity",
       "title": "Software Internship",
       "subtitle": "IT Department",
       "image": "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=400",
-      "route": "/internships",
+      "route": "/opportunities", // Leads to the Opportunities Hub (Tabs)
     },
     {
       "type": "club",
@@ -55,6 +54,7 @@ class _HomePageState extends State<HomePage> {
     },
   ];
 
+  // Slideshow assets
   final List<String> slideshowImages = const [
     "assets/images/slideshow.png",
     "assets/images/slideshow (2).png",
@@ -66,23 +66,22 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Pro-tip: Add an AppBar or a SafeArea if you aren't using one in a parent widget
       body: SafeArea( 
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 🖼️ SLIDESHOW
+              // 1. SLIDESHOW SECTION
               SizedBox(
                 height: 200,
                 child: PageView.builder(
                   itemCount: slideshowImages.length,
-                  controller: _pageController, // Use the managed controller
+                  controller: _pageController,
                   itemBuilder: (context, index) {
                     return Container(
                       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.grey[300], // Placeholder color
+                        color: Colors.grey[300],
                         borderRadius: BorderRadius.circular(15),
                         image: DecorationImage(
                           image: AssetImage(slideshowImages[index]),
@@ -96,9 +95,9 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 10),
 
-              // CATEGORIES
+              // 2. CATEGORIES HORIZONTAL SCROLL
               SizedBox(
-                height: 100,
+                height: 110, 
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -106,7 +105,7 @@ class _HomePageState extends State<HomePage> {
                     CategoryItem(icon: Icons.group, label: "Clubs", routeName: "/clubs"),
                     CategoryItem(icon: Icons.event, label: "Events", routeName: "/events"),
                     CategoryItem(icon: Icons.volunteer_activism, label: "Volunteer", routeName: "/volunteer"),
-                    CategoryItem(icon: Icons.work_outline, label: "Internships", routeName: "/internships"),
+                    CategoryItem(icon: Icons.work_outline, label: "Opportunities", routeName: "/opportunities"),
                   ],
                 ),
               ),
@@ -119,9 +118,9 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              // 🔥 RECOMMENDED CARDS
+              // 3. RECOMMENDED CARDS LIST
               SizedBox(
-                height: 240, // Increased slightly to prevent text clipping
+                height: 240,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.only(right: 12),
@@ -147,9 +146,12 @@ class _HomePageState extends State<HomePage> {
                                   height: 120,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
-                                  // Added error builder to prevent crashes if URL is dead
                                   errorBuilder: (context, error, stackTrace) => 
-                                    Container(height: 120, color: Colors.grey, child: const Icon(Icons.broken_image)),
+                                    Container(
+                                      height: 120, 
+                                      color: Colors.grey[300], 
+                                      child: const Icon(Icons.broken_image, color: Colors.grey)
+                                    ),
                                 ),
                               ),
                               Padding(
@@ -199,6 +201,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+// Separate Widget for Category Icons to keep code clean and reusable
 class CategoryItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -213,18 +216,25 @@ class CategoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => Navigator.pushNamed(context, routeName),
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox( // Changed Container to SizedBox for better performance
-        width: 90,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 35, color: Theme.of(context).primaryColor),
-            const SizedBox(height: 5),
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-          ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, routeName),
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          width: 90,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 35, color: const Color(0xffb1170c)),
+              const SizedBox(height: 5),
+              Text(
+                label, 
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

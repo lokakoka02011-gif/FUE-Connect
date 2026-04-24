@@ -17,6 +17,8 @@ import 'package:fue_connect/screens/features/SearchPage.dart';
 import 'package:fue_connect/screens/features/VolunteerPage.dart';
 import 'package:fue_connect/screens/features/NotificationPage.dart';
 import 'package:fue_connect/screens/auth/login_screen.dart';
+import 'package:fue_connect/screens/features/SupportPage.dart';
+import 'package:fue_connect/screens/features/OpportunitiesPage.dart'; // RE-ADDED
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,11 +52,14 @@ class MyApp extends StatelessWidget {
       home: const LoginScreen(),
       routes: {
         '/main': (context) => const MainPage(),
+        '/login': (context) => const LoginScreen(),
         '/clubs': (context) => const ClubsPage(),
         '/events': (context) => const EventsPage(),
         '/volunteer': (context) => const VolunteerPage(),
+        '/opportunities': (context) => const OpportunitiesPage(), // FIXED: Points to Hub
         '/internships': (context) => const InternshipsPage(),
         '/notification': (context) => const NotificationPage(),
+        '/support': (context) => const SupportPage(), 
       },
     );
   }
@@ -81,7 +86,6 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  // Helper for drawer menu items
   Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap, {Color color = Colors.black87}) {
     return ListTile(
       leading: Icon(icon, color: color),
@@ -104,9 +108,7 @@ class _MainPageState extends State<MainPage> {
               isLabelVisible: true,
               child: IconButton(
                 icon: const Icon(Icons.notifications),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/notification');
-                },
+                onPressed: () => Navigator.pushNamed(context, '/notification'),
               ),
             ),
           ),
@@ -116,7 +118,6 @@ class _MainPageState extends State<MainPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. DYNAMIC HEADER
             StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('users')
@@ -143,21 +144,13 @@ class _MainPageState extends State<MainPage> {
                         child: Icon(Icons.school, size: 40, color: Color(0xffb1170c)),
                       ),
                       const SizedBox(height: 15),
-                      Text(
-                        name,
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        email,
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
+                      Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(email, style: const TextStyle(color: Colors.white70, fontSize: 14)),
                     ],
                   ),
                 );
               },
             ),
-
-            // 2. APP DESCRIPTION
             const Padding(
               padding: EdgeInsets.all(16.0),
               child: Text(
@@ -165,10 +158,7 @@ class _MainPageState extends State<MainPage> {
                 style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
               ),
             ),
-
             const Divider(height: 1),
-
-            // 3. NAVIGATION ITEMS
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
@@ -178,12 +168,13 @@ class _MainPageState extends State<MainPage> {
                   _buildMenuItem(Icons.calendar_month_outlined, "Academic Calendar", () {}),
                   const Divider(),
                   _buildMenuItem(Icons.bookmark_border, "Saved Items", () {}),
-                  _buildMenuItem(Icons.support_agent_rounded, "Support & FAQs", () {}),
+                  _buildMenuItem(Icons.support_agent_rounded, "Support & FAQs", () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/support'); 
+                  }),       
                 ],
               ),
             ),
-
-            // 4. LOGOUT
             const Divider(height: 1),
             _buildMenuItem(
               Icons.logout_rounded,
@@ -205,20 +196,11 @@ class _MainPageState extends State<MainPage> {
         backgroundColor: const Color(0xffb1170c),
         selectedItemColor: Colors.black,
         unselectedItemColor: Colors.white,
-        type: BottomNavigationBarType.fixed, // Keeps labels visible
+        type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Account',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
         ],
       ),
     );
