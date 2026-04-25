@@ -4,37 +4,56 @@ import 'package:url_launcher/url_launcher.dart';
 class SupportPage extends StatelessWidget {
   const SupportPage({super.key});
 
-  // Function to trigger the email redirect
-  Future<void> _sendEmail() async {
-    final Uri emailLaunchUri = Uri(
-      scheme: 'mailto',
-      path: 'support@fue.com',
-      queryParameters: {
-        'subject': 'FUE Connect Support Request',
-        'body': 'Hello FUE Support Team,\n\n',
-      },
-    );
+  final Color fueRed = const Color(0xffb1170c);
 
+  // General Launch Function with Technical Safeguards
+  Future<void> _launchUrl(Uri uri) async {
     try {
-      // On Web, launchUrl is generally preferred with a specific mode
-      if (await canLaunchUrl(emailLaunchUri)) {
+      if (await canLaunchUrl(uri)) {
         await launchUrl(
-          emailLaunchUri,
+          uri,
           mode: LaunchMode.externalApplication,
         );
-      } else {
-        debugPrint('Could not launch email client');
       }
     } catch (e) {
-      debugPrint('Error launching email: $e');
+      debugPrint('Error launching: $e');
     }
+  }
+
+  // Email Logic
+  Future<void> _sendEmail() async {
+    final Uri uri = Uri(
+      scheme: 'mailto',
+      path: 'support@fue.edu.eg',
+      queryParameters: {'subject': 'FUE Connect Support Request'},
+    );
+    await _launchUrl(uri);
+  }
+
+  // Phone Call Logic
+  Future<void> _makeCall() async {
+    final Uri uri = Uri(scheme: 'tel', path: '+20123456789'); // Replace with actual FUE number
+    await _launchUrl(uri);
+  }
+
+  // Social Media Links
+  Future<void> _launchSocial(String platform) async {
+    final String url = platform == 'instagram' 
+      ? 'https://www.instagram.com/fue_egypt' 
+      : 'https://www.facebook.com/fue.edu.eg';
+    await _launchUrl(Uri.parse(url));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('FUE Support Center'),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -49,42 +68,69 @@ class SupportPage extends StatelessWidget {
             const Text("Get in touch with the FUE Connect team or find answers below."),
             const SizedBox(height: 30),
 
+            // Top Row: Email and Live Chat
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Email Button with redirect logic
-                _buildContactBox(
-                  Icons.email, 
-                  "Email Us", 
-                  Colors.blue, 
-                  width: 150,
-                  onTap: _sendEmail,
+                Expanded(
+                  child: _buildContactBox(
+                    context,
+                    Icons.email_rounded,
+                    "Email Us",
+                    Colors.blue,
+                    onTap: _sendEmail,
+                  ),
                 ),
-                // Placeholder for Live Chat
-                _buildContactBox(
-                  Icons.chat_bubble, 
-                  "Live Chat", 
-                  Colors.green, 
-                  width: 150,
-                  onTap: () {
-                    debugPrint("Live Chat Tapped");
-                  },
+                const SizedBox(width: 15),
+                Expanded(
+                  child: _buildContactBox(
+                    context,
+                    Icons.forum_rounded, // Improved Live Chat icon
+                    "Live Chat",
+                    Colors.green,
+                    onTap: () {
+                      debugPrint("Live Chat Clicked");
+                      Navigator.pushNamed(context, '/chat');
+                    },
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 15),
+            
             // Emergency Button
             _buildContactBox(
-              Icons.phone_in_talk, 
-              "Campus Security (Emergency)", 
-              Colors.red,
-              width: double.infinity,
-              onTap: () {
-                debugPrint("Emergency Call Tapped");
-              },
+              context,
+              Icons.phone_in_talk_rounded,
+              "Campus Security (Emergency)",
+              fueRed,
+              isFullWidth: true,
+              onTap: _makeCall,
             ),
 
             const SizedBox(height: 40),
+            const Text("Follow FUE Official", 
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 15),
+            Row(
+              children: [
+                // Branded Instagram Button
+                _buildSocialIconButton(
+                  icon: Icons.camera_alt_rounded,
+                  color: Colors.purple, // Instagram Vibe
+                  onPressed: () => _launchSocial('instagram'),
+                ),
+                const SizedBox(width: 15),
+                // Branded Facebook Button
+                _buildSocialIconButton(
+                  icon: Icons.facebook_rounded,
+                  color: const Color(0xFF1877F2), // Official Facebook Blue
+                  onPressed: () => _launchSocial('facebook'),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 40),
+            // FAQs
             const Text(
               "Frequently Asked Questions",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -92,12 +138,16 @@ class SupportPage extends StatelessWidget {
             const SizedBox(height: 15),
             _buildFAQTile("How do I join an event?",
                 "Go to the Events tab, click on the event you like, and hit 'Join Event'."),
-            _buildFAQTile("Where can I see my volunteer hours?",
-                "You can track your approved hours in your Profile section."),
-            _buildFAQTile("How to report a campus issue?",
-                "Use the 'Live Chat' button above to speak with a student representative."),
+            _buildFAQTile("Is there a minimum GPA for opportunities?",
+                "Some professional opportunities require a specific GPA. Check the 'Recommended' section for details tailored to your profile."),
+            _buildFAQTile("How can I update my Major/Minor?",
+                "You can edit your academic info in the Account section (coming soon)."),
+            _buildFAQTile("Where is the student clinic located?",
+                "The main clinic is located in the Ground Floor of the Dental Hospital building."),
+            _buildFAQTile("Forgotten ID or Password?",
+                "Use the 'Forgot Password' link on the Login screen to receive a reset link at your FUE email."),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 50),
             const Center(
               child: Text(
                 "FUE Connect v1.0.0",
@@ -110,29 +160,58 @@ class SupportPage extends StatelessWidget {
     );
   }
 
-  // Updated helper with HitTestBehavior.opaque for Chrome compatibility
-  Widget _buildContactBox(IconData icon, String label, Color color, 
-      {required double width, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      // behavior: HitTestBehavior.opaque makes the entire container area clickable
-      behavior: HitTestBehavior.opaque, 
-      child: Container(
-        width: width,
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: color.withOpacity(0.5)),
+  // Social Button Helper for brand accuracy and clickability
+  Widget _buildSocialIconButton({required IconData icon, required Color color, required VoidCallback onPressed}) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+            border: Border.all(color: color.withOpacity(0.2)),
+          ),
+          child: Icon(icon, color: color, size: 28),
         ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 30),
-            const SizedBox(height: 10),
-            Text(label,
-                style: TextStyle(color: color, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center),
-          ],
+      ),
+    );
+  }
+
+  // Contact Box with InkWell for better hit-testing and ripple feedback
+  Widget _buildContactBox(BuildContext context, IconData icon, String label, Color color,
+      {bool isFullWidth = false, required VoidCallback onTap}) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(15),
+          highlightColor: color.withOpacity(0.05),
+          splashColor: color.withOpacity(0.1),
+          child: Container(
+            width: isFullWidth ? double.infinity : null,
+            padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: color.withOpacity(0.3)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: color, size: 32),
+                const SizedBox(height: 12),
+                Text(
+                  label,
+                  style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -140,11 +219,11 @@ class SupportPage extends StatelessWidget {
 
   Widget _buildFAQTile(String question, String answer) {
     return ExpansionTile(
-      title: Text(question, style: const TextStyle(fontWeight: FontWeight.w500)),
+      title: Text(question, style: const TextStyle(fontWeight: FontWeight.w600)),
       children: [
         Padding(
-          padding: const EdgeInsets.all(15.0),
-          child: Text(answer, style: const TextStyle(color: Colors.black54)),
+          padding: const EdgeInsets.all(16.0),
+          child: Text(answer, style: const TextStyle(color: Colors.black87, height: 1.4)),
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fue_connect/services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -20,7 +21,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
+  bool _obscureConfirmPassword = true; // Added toggle state for confirm password
+
+  String _capitalize(String value) {
+    if (value.isEmpty) return value;
+    return value[0].toUpperCase() + value.substring(1);
+  }
 
   @override
   void dispose() {
@@ -33,10 +39,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _register() async {
-    // 1. Check if the form is valid
     if (!_formKey.currentState!.validate()) return;
 
-    // 2. Check if passwords match
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Passwords do not match!")),
@@ -46,29 +50,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
+    final String input = _emailController.text.trim();
+    final String fullEmail = "$input@fue.edu.eg";
+    
+    // Logic: Exactly 8 digits = Student. Anything else = Admin.
+    final bool isStudent = RegExp(r'^\d{8}$').hasMatch(input);
+    final String userRole = isStudent ? "student" : "admin";
+
     try {
       await _authService.registerWithEmail(
-        email: _emailController.text.trim(),
+        email: fullEmail,
         password: _passwordController.text,
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
+        role: userRole, 
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Registration Successful! Please Login.")),
-        );
-        Navigator.pop(context); 
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
       }
-    } catch (e) {
+
+      if (mounted) _showSuccessDialog(fullEmail);
+      
+    } on FirebaseAuthException catch (e) {
+      String message = e.code == 'email-already-in-use' 
+          ? "This email is already registered." 
+          : "Registration failed.";
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showSuccessDialog(String email) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Verify Email"),
+        content: Text("A link has been sent to $email. Please verify before logging in."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -79,7 +115,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Form(
-            key: _formKey, // Used for validation
+            key: _formKey,
             child: Column(
               children: [
                 const Icon(Icons.person_add, size: 60, color: Color(0xffb1170c)),
@@ -88,33 +124,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // First Name
                 TextFormField(
                   controller: _firstNameController,
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (v) => _firstNameController.value = _firstNameController.value.copyWith(
+                    text: _capitalize(v),
+                    selection: TextSelection.collapsed(offset: _capitalize(v).length),
+                  ),
                   decoration: const InputDecoration(labelText: "First Name", border: OutlineInputBorder()),
-                  validator: (v) => v!.isEmpty ? "Enter your first name" : null,
+                  validator: (v) => v!.isEmpty ? "Required" : null,
                 ),
                 const SizedBox(height: 16),
 
                 // Last Name
                 TextFormField(
                   controller: _lastNameController,
+                  textCapitalization: TextCapitalization.words,
+                  onChanged: (v) => _lastNameController.value = _lastNameController.value.copyWith(
+                    text: _capitalize(v),
+                    selection: TextSelection.collapsed(offset: _capitalize(v).length),
+                  ),
                   decoration: const InputDecoration(labelText: "Last Name", border: OutlineInputBorder()),
-                  validator: (v) => v!.isEmpty ? "Enter your last name" : null,
+                  validator: (v) => v!.isEmpty ? "Required" : null,
                 ),
                 const SizedBox(height: 16),
 
-                // Email with University Check
+                // University Email (Hidden Admin Entry)
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: "University Email", 
-                    hintText: "example@fue.edu.eg",
+                    hintText: "e.g. 20250001",
+                    suffixText: "@fue.edu.eg",
+                    suffixStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
                     border: OutlineInputBorder()
                   ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return "Enter your email";
-                    if (!v.endsWith("@fue.edu.eg")) return "Must be an @fue.edu.eg email";
-                    return null;
-                  },
+                  validator: (v) => v!.isEmpty ? "Enter your ID or Email" : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -124,17 +167,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: "Password",
+                    helperText: "8+ chars, 1 uppercase, 1 number",
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
-                  validator: (v) => v!.length < 6 ? "Password must be 6+ chars" : null,
+                  validator: (v) {
+                    if (v == null || v.length < 8) return "Must be 8+ characters";
+                    if (!RegExp(r'^(?=.*?[A-Z])(?=.*?[0-9])').hasMatch(v)) return "Need 1 uppercase & 1 number";
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 
-                // Confirm Password
+                // Confirm Password (With Toggle)
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
@@ -146,11 +194,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
                     ),
                   ),
-                  validator: (v) => v!.isEmpty ? "Please confirm your password" : null,
+                  validator: (v) => v!.isEmpty ? "Confirm your password" : null,
                 ),
                 const SizedBox(height: 30),
 
-                // Register Button
                 SizedBox(
                   width: double.infinity,
                   height: 50,

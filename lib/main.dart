@@ -19,7 +19,12 @@ import 'package:fue_connect/screens/features/NotificationPage.dart';
 import 'package:fue_connect/screens/auth/login_screen.dart';
 import 'package:fue_connect/screens/features/SupportPage.dart';
 import 'package:fue_connect/screens/features/OpportunitiesPage.dart'; 
-import 'package:fue_connect/screens/features/AboutUsPage.dart'; // ADDED
+import 'package:fue_connect/screens/features/AboutUsPage.dart'; 
+import 'package:fue_connect/screens/features/GpaCalculator.dart';
+import 'package:fue_connect/screens/features/ChatPage.dart';
+import 'package:fue_connect/screens/features/CampusMapPage.dart';
+import 'package:fue_connect/screens/features/AcademicCalendarPage.dart';
+import 'package:fue_connect/screens/features/SavedItemsPage.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,7 +66,12 @@ class MyApp extends StatelessWidget {
         '/internships': (context) => const InternshipsPage(),
         '/notification': (context) => const NotificationPage(),
         '/support': (context) => const SupportPage(), 
-        '/about': (context) => const AboutUsPage(), // ADDED
+        '/about': (context) => const AboutUsPage(), 
+        '/gpa': (context) => const GpaCalculator(), 
+        '/chat': (context) => const ChatPage(),
+        '/map': (context) => const CampusMapPage(),
+        '/calendar': (context) => const AcademicCalendarPage(),
+        '/saved': (context) => const SavedItemsPage(),
       },
     );
   }
@@ -165,12 +175,24 @@ class _MainPageState extends State<MainPage> {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  _buildMenuItem(Icons.calculate_outlined, "GPA Calculator", () {}),
-                  _buildMenuItem(Icons.map_outlined, "Campus Map", () {}),
-                  _buildMenuItem(Icons.calendar_month_outlined, "Academic Calendar", () {}),
+                  _buildMenuItem(Icons.calculate_outlined, "GPA Calculator", () {
+                    Navigator.pop(context); 
+                    Navigator.pushNamed(context, '/gpa');
+                  }),
+                  _buildMenuItem(Icons.map_outlined, "Campus Map", () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/map');
+                  }),
+                  _buildMenuItem(Icons.calendar_month_outlined, "Academic Calendar", () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/calendar');
+
+                  }),
                   const Divider(),
-                  _buildMenuItem(Icons.bookmark_border, "Saved Items", () {}),
-                  // ADDED: About Us Item
+                  _buildMenuItem(Icons.bookmark_border, "Saved Items", () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/saved');
+                  }),
                   _buildMenuItem(Icons.info_outline_rounded, "About FUE Connect", () {
                     Navigator.pop(context);
                     Navigator.pushNamed(context, '/about');

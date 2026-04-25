@@ -22,7 +22,6 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // List of recommended items at the bottom
   final List<Map<String, dynamic>> recommendedItems = const [
     {
       "type": "volunteer",
@@ -43,7 +42,7 @@ class _HomePageState extends State<HomePage> {
       "title": "Software Internship",
       "subtitle": "IT Department",
       "image": "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=400",
-      "route": "/opportunities", // Leads to the Opportunities Hub (Tabs)
+      "route": "/opportunities",
     },
     {
       "type": "club",
@@ -54,7 +53,6 @@ class _HomePageState extends State<HomePage> {
     },
   ];
 
-  // Slideshow assets
   final List<String> slideshowImages = const [
     "assets/images/slideshow.png",
     "assets/images/slideshow (2).png",
@@ -66,12 +64,32 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea( 
+      backgroundColor: Colors.white,
+      body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. SLIDESHOW SECTION
+              // 1. SEARCH BAR
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const TextField(
+                    decoration: InputDecoration(
+                      hintText: "Search for clubs, events...",
+                      border: InputBorder.none,
+                      icon: Icon(Icons.search, color: Colors.grey),
+                    ),
+                  ),
+                ),
+              ),
+
+              // 2. SLIDESHOW SECTION
               SizedBox(
                 height: 200,
                 child: PageView.builder(
@@ -79,7 +97,7 @@ class _HomePageState extends State<HomePage> {
                   controller: _pageController,
                   itemBuilder: (context, index) {
                     return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                       decoration: BoxDecoration(
                         color: Colors.grey[300],
                         borderRadius: BorderRadius.circular(15),
@@ -93,23 +111,32 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
 
-              // 2. CATEGORIES HORIZONTAL SCROLL
+              // 3. CATEGORIES SECTION (GPA Calculator removed from here)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  "Categories",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 10),
               SizedBox(
-                height: 110, 
+                height: 100,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   children: const [
-                    CategoryItem(icon: Icons.group, label: "Clubs", routeName: "/clubs"),
-                    CategoryItem(icon: Icons.event, label: "Events", routeName: "/events"),
-                    CategoryItem(icon: Icons.volunteer_activism, label: "Volunteer", routeName: "/volunteer"),
-                    CategoryItem(icon: Icons.work_outline, label: "Opportunities", routeName: "/opportunities"),
+                    CategoryItem(icon: Icons.group_rounded, label: "Clubs", routeName: "/clubs"),
+                    CategoryItem(icon: Icons.event_available_rounded, label: "Events", routeName: "/events"),
+                    CategoryItem(icon: Icons.volunteer_activism_rounded, label: "Volunteer", routeName: "/volunteer"),
+                    CategoryItem(icon: Icons.work_rounded, label: "Opportunities", routeName: "/opportunities"),
                   ],
                 ),
               ),
 
+              // 4. RECOMMENDED SECTION
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                 child: Text(
@@ -118,9 +145,8 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              // 3. RECOMMENDED CARDS LIST
               SizedBox(
-                height: 240,
+                height: 260,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.only(right: 12),
@@ -131,11 +157,11 @@ class _HomePageState extends State<HomePage> {
                     return GestureDetector(
                       onTap: () => Navigator.pushNamed(context, item["route"]),
                       child: Container(
-                        width: 180,
+                        width: 200,
                         margin: const EdgeInsets.only(left: 12, bottom: 10),
                         child: Card(
+                          elevation: 2,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          elevation: 3,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -146,40 +172,44 @@ class _HomePageState extends State<HomePage> {
                                   height: 120,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => 
-                                    Container(
-                                      height: 120, 
-                                      color: Colors.grey[300], 
-                                      child: const Icon(Icons.broken_image, color: Colors.grey)
-                                    ),
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    height: 120,
+                                    color: Colors.grey[200],
+                                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                                  ),
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(12.0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xffb1170c),
-                                        borderRadius: BorderRadius.circular(10),
+                                        color: const Color(0xffb1170c).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
                                         item["type"].toString().toUpperCase(),
-                                        style: const TextStyle(color: Colors.white, fontSize: 10),
+                                        style: const TextStyle(
+                                          color: Color(0xffb1170c),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
+                                    const SizedBox(height: 8),
                                     Text(
                                       item["title"],
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
                                     ),
+                                    const SizedBox(height: 4),
                                     Text(
                                       item["subtitle"],
-                                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
                                     ),
                                   ],
                                 ),
@@ -201,7 +231,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// Separate Widget for Category Icons to keep code clean and reusable
 class CategoryItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -216,25 +245,30 @@ class CategoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => Navigator.pushNamed(context, routeName),
-        borderRadius: BorderRadius.circular(12),
-        child: SizedBox(
-          width: 90,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 35, color: const Color(0xffb1170c)),
-              const SizedBox(height: 5),
-              Text(
-                label, 
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                textAlign: TextAlign.center,
+    return InkWell(
+      onTap: () => Navigator.pushNamed(context, routeName),
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        width: 85,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xffb1170c).withOpacity(0.05),
+                shape: BoxShape.circle,
               ),
-            ],
-          ),
+              child: Icon(icon, size: 28, color: const Color(0xffb1170c)),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );

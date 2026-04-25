@@ -1,15 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-
-  // 1. ADDED: Initializing GoogleSignIn with your specific Client ID for Web support
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: '775315883248-frvh6gsggad5l5dlkl8p05fl75vkf96c.apps.googleusercontent.com',
-  );
 
   // Get current user
   User? get currentUser => _auth.currentUser;
@@ -23,6 +17,7 @@ class AuthService {
     required String password,
     required String firstName,
     required String lastName,
+    required String role,
   }) async {
     try {
       UserCredential userCredential =
@@ -31,10 +26,14 @@ class AuthService {
         password: password,
       );
 
+      // Determine role based on email format (Numbers = student)
+      String assignedRole = email.contains(RegExp(r'\d')) ? 'student' : 'admin';
+
       await _db.collection('users').doc(userCredential.user!.uid).set({
         'firstName': firstName,
         'lastName': lastName,
         'email': email,
+        'role': assignedRole, // Added role field
         'createdAt': FieldValue.serverTimestamp(),
         'profilePicUrl': '',
       });
@@ -60,53 +59,33 @@ class AuthService {
     }
   }
 
-  // ── GOOGLE SIGN-IN ───────────────────────────────────
-  Future<UserCredential?> signInWithGoogle() async {
+  // ── GET USER ROLE ────────────────────────────────────
+  // Fetches the role from Firestore to confirm permissions
+  Future<String> getUserRole(String uid) async {
     try {
-      // 2. UPDATED: Using the initialized _googleSignIn instance
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null; 
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
-
-      final doc =
-          await _db.collection('users').doc(userCredential.user!.uid).get();
-
-      if (!doc.exists) {
-        await _db.collection('users').doc(userCredential.user!.uid).set({
-          'firstName': userCredential.user!.displayName?.split(' ').first ?? '',
-          'lastName': userCredential.user!.displayName?.split(' ').last ?? '',
-          'email': userCredential.user!.email,
-          'profilePicUrl': userCredential.user!.photoURL ?? '',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+      DocumentSnapshot doc = await _db.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        return (doc.data() as Map<String, dynamic>)['role'] ?? 'student';
       }
-
-      return userCredential;
+      return 'student';
     } catch (e) {
-      throw Exception('Google sign-in failed: $e');
+      return 'student';
     }
   }
 
   // ── SIGN OUT ─────────────────────────────────────────
   Future<void> signOut() async {
-    // 3. UPDATED: Using the same instance for sign out
-    await _googleSignIn.signOut(); 
     await _auth.signOut();
   }
 
   // ── PASSWORD RESET ───────────────────────────────────
-  Future<void> sendPasswordResetEmail(String email) async {
-    await _auth.sendPasswordResetEmail(email: email);
+  // Renamed to match the LoginScreen call
+  Future<void> sendPasswordReset(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      throw Exception(e.toString());
+    }
   }
 
   // ── ERROR HANDLER ────────────────────────────────────
@@ -119,9 +98,9 @@ class AuthService {
       case 'invalid-email':
         return 'Please enter a valid email address.';
       case 'user-not-found':
-        return 'No account found with this email.';
       case 'wrong-password':
-        return 'Incorrect password. Please try again.';
+      case 'invalid-credential': // Combined for privacy/security
+        return 'Wrong password or email. Please try again.';
       case 'too-many-requests':
         return 'Too many attempts. Please try again later.';
       default:
