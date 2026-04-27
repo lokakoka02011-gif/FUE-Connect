@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fue_connect/services/auth_service.dart';
 import 'package:fue_connect/screens/auth/register_screen.dart';
+import 'package:fue_connect/screens/features/admin/AdminDashboardPage.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,14 +42,12 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (mounted) {
-        // 2. Fetch the actual role from Firestore for secure routing
-        final user = _authService.currentUser;
-        String role = await _authService.getUserRole(user!.uid);
+        bool isStudent = RegExp(r'^\d{8}$').hasMatch(idInput);
         
-        if (role == 'admin') {
-          Navigator.pushReplacementNamed(context, '/admin_dashboard');
-        } else {
+        if (isStudent) {
           Navigator.pushReplacementNamed(context, '/main');
+        } else {
+          Navigator.pushReplacementNamed(context, '/admin_dashboard');
         }
       }
     } catch (e) {

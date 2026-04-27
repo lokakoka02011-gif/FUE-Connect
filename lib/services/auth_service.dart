@@ -17,23 +17,31 @@ class AuthService {
     required String password,
     required String firstName,
     required String lastName,
-    required String role,
+    required String role, // Kept to avoid UI errors, but overwritten by logic below
   }) async {
     try {
+      // Clean inputs to prevent "Wrong Password" or "User Not Found" errors
+      final String cleanEmail = email.trim().toLowerCase();
+      final String cleanPassword = password.trim();
+
       UserCredential userCredential =
           await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
+        email: cleanEmail,
+        password: cleanPassword,
       );
 
-      // Determine role based on email format (Numbers = student)
-      String assignedRole = email.contains(RegExp(r'\d')) ? 'student' : 'admin';
+      // --- LOGIC: 8 digits = student, otherwise = admin ---
+      String idPart = cleanEmail.split('@')[0];
+      // Regex checks if the ID part is EXACTLY 8 digits
+      bool is8Digits = RegExp(r'^\d{8}$').hasMatch(idPart);
+      String assignedRole = is8Digits ? 'student' : 'admin';
 
       await _db.collection('users').doc(userCredential.user!.uid).set({
         'firstName': firstName,
         'lastName': lastName,
-        'email': email,
-        'role': assignedRole, // Added role field
+        'email': cleanEmail,
+        'role': assignedRole, 
+        'uid': userCredential.user!.uid,
         'createdAt': FieldValue.serverTimestamp(),
         'profilePicUrl': '',
       });
@@ -50,9 +58,10 @@ class AuthService {
     required String password,
   }) async {
     try {
+      // Clean inputs to avoid accidental space/case errors
       return await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
       );
     } on FirebaseAuthException catch (e) {
       throw _handleAuthError(e);
@@ -60,7 +69,6 @@ class AuthService {
   }
 
   // ── GET USER ROLE ────────────────────────────────────
-  // Fetches the role from Firestore to confirm permissions
   Future<String> getUserRole(String uid) async {
     try {
       DocumentSnapshot doc = await _db.collection('users').doc(uid).get();
@@ -79,10 +87,9 @@ class AuthService {
   }
 
   // ── PASSWORD RESET ───────────────────────────────────
-  // Renamed to match the LoginScreen call
   Future<void> sendPasswordReset(String email) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email);
+      await _auth.sendPasswordResetEmail(email: email.trim().toLowerCase());
     } catch (e) {
       throw Exception(e.toString());
     }
@@ -90,6 +97,9 @@ class AuthService {
 
   // ── ERROR HANDLER ────────────────────────────────────
   String _handleAuthError(FirebaseAuthException e) {
+    // Printing the code helps you debug in the VS Code console
+    print("Firebase Auth Error Code: ${e.code}");
+    
     switch (e.code) {
       case 'weak-password':
         return 'Password must be at least 6 characters.';
@@ -98,9 +108,11 @@ class AuthService {
       case 'invalid-email':
         return 'Please enter a valid email address.';
       case 'user-not-found':
+        return 'No user found with this ID.';
       case 'wrong-password':
-      case 'invalid-credential': // Combined for privacy/security
-        return 'Wrong password or email. Please try again.';
+        return 'Incorrect password. Please try again.';
+      case 'invalid-credential': 
+        return 'Wrong password or ID. Please check your credentials.';
       case 'too-many-requests':
         return 'Too many attempts. Please try again later.';
       default:

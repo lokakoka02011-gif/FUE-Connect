@@ -1,3 +1,4 @@
+import 'dart:async'; // Required for the automatic timer
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
@@ -9,19 +10,19 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late PageController _pageController;
+  int _currentPage = 0;
+  late Timer _timer;
 
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(viewportFraction: 0.9);
-  }
+  // 1. SLIDESHOW IMAGES
+  final List<String> slideshowImages = const [
+    "assets/images/slideshow.png",
+    "assets/images/slideshow (2).png",
+    "assets/images/slideshow (3).png",
+    "assets/images/slideshow (4).png",
+    "assets/images/slideshow (5).png",
+  ];
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
+  // 2. RECOMMENDED ITEMS DATA
   final List<Map<String, dynamic>> recommendedItems = const [
     {
       "type": "volunteer",
@@ -53,13 +54,35 @@ class _HomePageState extends State<HomePage> {
     },
   ];
 
-  final List<String> slideshowImages = const [
-    "assets/images/slideshow.png",
-    "assets/images/slideshow (2).png",
-    "assets/images/slideshow (3).png",
-    "assets/images/slideshow (4).png",
-    "assets/images/slideshow (5).png",
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.9, initialPage: 0);
+
+    // --- SETUP AUTOMATIC TIMER ---
+    _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
+      if (_currentPage < slideshowImages.length - 1) {
+        _currentPage++;
+      } else {
+        _currentPage = 0;
+      }
+
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeIn,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel(); // Stop timer to prevent memory leaks
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +93,7 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. SEARCH BAR
+              // --- SEARCH BAR ---
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Container(
@@ -89,12 +112,17 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
 
-              // 2. SLIDESHOW SECTION
+              // --- AUTOMATIC SLIDESHOW ---
               SizedBox(
                 height: 200,
                 child: PageView.builder(
                   itemCount: slideshowImages.length,
                   controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentPage = index;
+                    });
+                  },
                   itemBuilder: (context, index) {
                     return Container(
                       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -113,7 +141,7 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 15),
 
-              // 3. CATEGORIES SECTION (GPA Calculator removed from here)
+              // --- CATEGORIES SECTION ---
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: Text(
@@ -128,15 +156,27 @@ class _HomePageState extends State<HomePage> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   children: const [
-                    CategoryItem(icon: Icons.group_rounded, label: "Clubs", routeName: "/clubs"),
-                    CategoryItem(icon: Icons.event_available_rounded, label: "Events", routeName: "/events"),
-                    CategoryItem(icon: Icons.volunteer_activism_rounded, label: "Volunteer", routeName: "/volunteer"),
-                    CategoryItem(icon: Icons.work_rounded, label: "Opportunities", routeName: "/opportunities"),
+                    CategoryItem(
+                        icon: Icons.group_rounded,
+                        label: "Clubs",
+                        routeName: "/clubs"),
+                    CategoryItem(
+                        icon: Icons.event_available_rounded,
+                        label: "Events",
+                        routeName: "/events"),
+                    CategoryItem(
+                        icon: Icons.volunteer_activism_rounded,
+                        label: "Volunteer",
+                        routeName: "/volunteer"),
+                    CategoryItem(
+                        icon: Icons.work_rounded,
+                        label: "Opportunities",
+                        routeName: "/opportunities"),
                   ],
                 ),
               ),
 
-              // 4. RECOMMENDED SECTION
+              // --- RECOMMENDED SECTION ---
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                 child: Text(
@@ -161,21 +201,25 @@ class _HomePageState extends State<HomePage> {
                         margin: const EdgeInsets.only(left: 12, bottom: 10),
                         child: Card(
                           elevation: 2,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15)),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               ClipRRect(
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(15)),
                                 child: Image.network(
                                   item["image"],
                                   height: 120,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => Container(
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
                                     height: 120,
                                     color: Colors.grey[200],
-                                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                                    child: const Icon(Icons.broken_image,
+                                        color: Colors.grey),
                                   ),
                                 ),
                               ),
@@ -185,9 +229,11 @@ class _HomePageState extends State<HomePage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xffb1170c).withOpacity(0.1),
+                                        color: const Color(0xffb1170c)
+                                            .withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -202,14 +248,18 @@ class _HomePageState extends State<HomePage> {
                                     const SizedBox(height: 8),
                                     Text(
                                       item["title"],
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       item["subtitle"],
-                                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                                      style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 12),
                                     ),
                                   ],
                                 ),
@@ -230,6 +280,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
+// --- WIDGET CLASSES DEFINED OUTSIDE OF HOMEPAGE STATE ---
 
 class CategoryItem extends StatelessWidget {
   final IconData icon;

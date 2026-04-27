@@ -1,139 +1,162 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
 
   @override
-  _NotificationPageState createState() => _NotificationPageState();
+  State<NotificationPage> createState() => _NotificationPageState();
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  String _searchQuery = "";
-  bool _showAllForTesting = false; // Toggle this to see if the database is connecting
+  String _selectedCategory = "All";
+  final List<String> _categories = [
+    "All",
+    "Application",
+    "Club",
+    "Event",
+    "Opportunity"
+  ];
+
+  // Matches your Firestore "studentRef" format exactly
+  String get studentPath =>
+      "/Students/${FirebaseAuth.instance.currentUser?.uid}";
 
   @override
   Widget build(BuildContext context) {
-    final String currentUserUid = FirebaseAuth.instance.currentUser?.uid ?? "";
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Notifications"),
-        actions: [
-          // This button is just for you to test during development!
-          IconButton(
-            icon: Icon(_showAllForTesting ? Icons.bug_report : Icons.person_search),
-            onPressed: () {
-              setState(() => _showAllForTesting = !_showAllForTesting);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(_showAllForTesting ? "Showing ALL (Debug Mode)" : "Showing YOURS only")),
-              );
-            },
-          )
-        ],
+        title: const Text("Notifications",
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xffb1170c),
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Column(
         children: [
-          // 1. Search Bar
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
-              decoration: const InputDecoration(
-                labelText: "Search notifications",
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+          // 1. Category Filter Section
+          Container(
+            color: const Color(0xffb1170c),
+            padding: const EdgeInsets.only(bottom: 12),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: _categories.map((cat) {
+                  bool isSelected = _selectedCategory == cat;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ChoiceChip(
+                      label: Text(cat),
+                      selected: isSelected,
+                      selectedColor: Colors.white,
+                      backgroundColor: Colors.white24,
+                      labelStyle: TextStyle(
+                        color:
+                            isSelected ? const Color(0xffb1170c) : Colors.white,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                      onSelected: (val) =>
+                          setState(() => _selectedCategory = cat),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
           ),
 
-          // 2. Real-time Notification Stream
+          // 2. Dynamic Notification List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: _showAllForTesting 
-                ? FirebaseFirestore.instance.collection('Notifications').snapshots()
-                : FirebaseFirestore.instance
-                    .collection('Notifications')
-                    .where('studentRef', isEqualTo: currentUserUid)
-                    .snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('Notifications')
+                  .where('studentRef', isEqualTo: studentPath)
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
-                }
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
-                // Filter local results based on search query
-                final docs = snapshot.data!.docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final message = (data['notification_message'] ?? "").toString().toLowerCase();
-                  final type = (data['notification_type'] ?? "").toString().toLowerCase();
-                  return message.contains(_searchQuery) || type.contains(_searchQuery);
-                }).toList();
-
-                // Manual sort by timestamp
-                docs.sort((a, b) {
-                  Timestamp t1 = (a.data() as Map<String, dynamic>)['timestamp'] ?? Timestamp.now();
-                  Timestamp t2 = (b.data() as Map<String, dynamic>)['timestamp'] ?? Timestamp.now();
-                  return t2.compareTo(t1);
-                });
-
-                if (docs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.notifications_none, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        Text(_showAllForTesting 
-                          ? "Database collection is empty!" 
-                          : "No notifications for your UID."),
-                        Text("UID: $currentUserUid", style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                      ],
-                    ),
-                  );
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                      child: Text("No notifications for you yet."));
                 }
+
+                // Filter by category locally
+                final docs = snapshot.data!.docs.where((doc) {
+                  if (_selectedCategory == "All") return true;
+                  String type =
+                      doc['notification_type'].toString().replaceAll('"', '');
+                  return type.toLowerCase() == _selectedCategory.toLowerCase();
+                }).toList();
 
                 return ListView.builder(
                   itemCount: docs.length,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   itemBuilder: (context, index) {
-                    final doc = docs[index];
-                    final data = doc.data() as Map<String, dynamic>;
-                    
-                    final String message = data['notification_message'] ?? "No Message";
-                    final String type = data['notification_type'] ?? "General";
-                    final bool isRead = data['isRead'] ?? false;
-                    
-                    String timeLabel = "Just now";
-                    if (data['timestamp'] != null && data['timestamp'] is Timestamp) {
-                      final DateTime date = (data['timestamp'] as Timestamp).toDate();
-                      timeLabel = "${date.hour}:${date.minute.toString().padLeft(2, '0')}";
-                    }
+                    var doc = docs[index];
+                    var data = doc.data() as Map<String, dynamic>;
 
-                    return ListTile(
-                      tileColor: isRead ? Colors.white : const Color(0xfffff5f5), // Very light red
-                      leading: CircleAvatar(
-                        backgroundColor: _getIconColor(type),
-                        child: Icon(_getIcon(type), color: Colors.white, size: 20),
-                      ),
-                      title: Text(
-                        message,
-                        style: TextStyle(
-                          fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                    // Logic: If isRead doesn't exist in Firebase yet, treat as false (unread)
+                    bool isRead =
+                        data.containsKey('isRead') ? data['isRead'] : false;
+
+                    DateTime dt = (data['timestamp'] as Timestamp).toDate();
+                    String timeLabel =
+                        DateFormat('jm').format(dt); // e.g. 5:47 PM
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      elevation: isRead ? 0 : 2,
+                      color: isRead ? Colors.grey[50] : Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(
+                          color: isRead
+                              ? Colors.transparent
+                              : const Color(0xffb1170c).withOpacity(0.2),
                         ),
                       ),
-                      subtitle: Text("$type • $timeLabel"),
-                      trailing: !isRead 
-                        ? const Icon(Icons.circle, color: Color(0xffb1170c), size: 12) 
-                        : null,
-                      onTap: () {
-                        FirebaseFirestore.instance
-                            .collection('Notifications')
-                            .doc(doc.id)
-                            .update({'isRead': true});
-                      },
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: isRead
+                              ? Colors.grey[300]
+                              : const Color(0xffb1170c),
+                          child: Icon(
+                            isRead
+                                ? Icons.notifications_none
+                                : Icons.notifications_active,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(
+                          data['notification_message'] ?? "",
+                          style: TextStyle(
+                            fontWeight:
+                                isRead ? FontWeight.normal : FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        subtitle: Row(
+                          children: [
+                            Text(data['notification_type']
+                                    ?.toString()
+                                    .replaceAll('"', '') ??
+                                ""),
+                            const Text(" • "),
+                            Text(timeLabel),
+                          ],
+                        ),
+                        onTap: () {
+                          // AUTOMATION: Click updates Firebase without you doing anything
+                          doc.reference.update({'isRead': true});
+                        },
+                      ),
                     );
                   },
                 );
@@ -143,23 +166,5 @@ class _NotificationPageState extends State<NotificationPage> {
         ],
       ),
     );
-  }
-
-  IconData _getIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'club': return Icons.group;
-      case 'event': return Icons.event;
-      case 'application': return Icons.assignment_turned_in;
-      default: return Icons.notifications;
-    }
-  }
-
-  Color _getIconColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'club': return Colors.blue;
-      case 'event': return Colors.orange;
-      case 'application': return Colors.green;
-      default: return const Color(0xffb1170c);
-    }
   }
 }

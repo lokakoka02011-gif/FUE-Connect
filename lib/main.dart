@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fue_connect/screens/features/admin/AdminDashboardPage.dart';
 import 'firebase_options.dart';
 
 // Services
@@ -25,6 +26,7 @@ import 'package:fue_connect/screens/features/ChatPage.dart';
 import 'package:fue_connect/screens/features/CampusMapPage.dart';
 import 'package:fue_connect/screens/features/AcademicCalendarPage.dart';
 import 'package:fue_connect/screens/features/SavedItemsPage.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,6 +74,7 @@ class MyApp extends StatelessWidget {
         '/map': (context) => const CampusMapPage(),
         '/calendar': (context) => const AcademicCalendarPage(),
         '/saved': (context) => const SavedItemsPage(),
+        '/admin_dashboard': (context) => const AdminDashboardPage()
       },
     );
   }
