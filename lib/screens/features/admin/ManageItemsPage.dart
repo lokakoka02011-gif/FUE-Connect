@@ -62,15 +62,28 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
       ),
       // Real-time listener to Firestore
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection(widget.collectionPath).snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection(widget.collectionPath)
+            .snapshots(),        
         builder: (context, snapshot) {
           if (snapshot.hasError) return const Center(child: Text("Something went wrong"));
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
           final docs = snapshot.data!.docs;
+          print("Docs count: ${docs.length}");
 
           if (docs.isEmpty) {
-            return const Center(child: Text("No items found. Add one!"));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.inbox, size: 60, color: Colors.grey),
+                  SizedBox(height: 10),
+                  Text("No items yet"),
+                  Text("Tap + to add new data", style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            );          
           }
 
           return ListView.builder(
@@ -86,9 +99,44 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
                   leading: data['imageUrl'] != null 
                     ? Image.network(data['imageUrl'], width: 50, height: 50, fit: BoxFit.cover)
                     : const Icon(Icons.image, size: 40),
-                  title: Text(data['title'] ?? 'No Title', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(data['description'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
-                  trailing: Row(
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          data['title'] ?? data['name'] ?? 'No Title',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          data['type'] ?? '',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    ],
+                  ),                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data['description'] ?? data['Description'] ?? '',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        data['type'] ?? 'Unknown',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),                  trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
@@ -105,7 +153,8 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete, color: fueRed),
+                        icon: const Icon(Icons.delete_outline, color: fueRed),
+                        tooltip: "Delete",
                         onPressed: () => deleteItem(docId),
                       ),
                     ],

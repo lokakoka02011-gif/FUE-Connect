@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -10,78 +12,106 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  String searchQuery = "";
-  List<Map<String, dynamic>> searchResults = [];
-  bool isLoading = false;
+  String _searchQuery = "";
+  List<Map<String, dynamic>> _searchResults = [];
+  List<Map<String, dynamic>> _recentlyViewed = [];
+  bool _isLoading = false;
 
-  void _performSearch(String query) async {
-    if (query.isEmpty) {
+  @override
+  void initState() {
+    super.initState();
+    _loadRecentlyViewed();
+  }
+
+  // --- PERSISTENCE LOGIC ---
+  Future<void> _loadRecentlyViewed() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? recentData = prefs.getString('recent_searches');
+    if (recentData != null) {
       setState(() {
-        searchResults = [];
-        searchQuery = "";
+        _recentlyViewed = List<Map<String, dynamic>>.from(json.decode(recentData));
+      });
+    }
+  }
+
+  Future<void> _addToRecent(Map<String, dynamic> item) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Remove duplicates to move the item to the top
+    _recentlyViewed.removeWhere((element) => 
+        element['displayTitle'] == item['displayTitle'] && 
+        element['origin'] == item['origin']);
+    
+    _recentlyViewed.insert(0, item);
+    
+    // Keep list manageable (last 5 items)
+    if (_recentlyViewed.length > 5) _recentlyViewed.removeLast();
+
+    await prefs.setString('recent_searches', json.encode(_recentlyViewed));
+    setState(() {});
+  }
+
+  // --- SEARCH LOGIC (FIXED) ---
+  void _performSearch(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _searchQuery = "";
       });
       return;
     }
 
     setState(() {
-      isLoading = true;
-      searchQuery = query;
+      _isLoading = true;
+      _searchQuery = query.toLowerCase();
     });
-
-    // Helping the search by capitalizing the first letter (e.g., 'robo' -> 'Robo')
-    String formattedQuery = query.trim();
-    if (formattedQuery.isNotEmpty) {
-      formattedQuery = formattedQuery[0].toUpperCase() + formattedQuery.substring(1);
-    }
 
     List<Map<String, dynamic>> tempResults = [];
 
     try {
-      // 1. Search Clubs (Field: 'name')
-      var clubSnap = await FirebaseFirestore.instance
-          .collection('Clubs')
-          .where('name', isGreaterThanOrEqualTo: formattedQuery)
-          .where('name', isLessThanOrEqualTo: '$formattedQuery\uf8ff')
-          .get();
+      // Fetching collections and filtering locally to fix the "first letter" issue
+      // 1. Search Clubs
+      var clubSnap = await FirebaseFirestore.instance.collection('Clubs').get();
       for (var doc in clubSnap.docs) {
         var data = doc.data();
-        data['displayTitle'] = data['name']; // Standardizing for the UI
-        data['origin'] = 'Clubs';
-        tempResults.add(data);
+        String name = (data['name'] ?? "").toString().toLowerCase();
+        if (name.contains(_searchQuery)) {
+          data['displayTitle'] = data['name'];
+          data['origin'] = 'Clubs';
+          tempResults.add(data);
+        }
       }
 
-      // 2. Search Events (Field: 'name')
-      var eventSnap = await FirebaseFirestore.instance
-          .collection('Events')
-          .where('name', isGreaterThanOrEqualTo: formattedQuery)
-          .where('name', isLessThanOrEqualTo: '$formattedQuery\uf8ff')
-          .get();
+      // 2. Search Events
+      var eventSnap = await FirebaseFirestore.instance.collection('Events').get();
       for (var doc in eventSnap.docs) {
         var data = doc.data();
-        data['displayTitle'] = data['name']; 
-        data['origin'] = 'Events';
-        tempResults.add(data);
+        String name = (data['name'] ?? "").toString().toLowerCase();
+        if (name.contains(_searchQuery)) {
+          data['displayTitle'] = data['name'];
+          data['origin'] = 'Events';
+          tempResults.add(data);
+        }
       }
 
-      // 3. Search Opportunity (Field: 'Title' - Capital T)
-      var oppSnap = await FirebaseFirestore.instance
-          .collection('Opportunity')
-          .where('Title', isGreaterThanOrEqualTo: formattedQuery)
-          .where('Title', isLessThanOrEqualTo: '$formattedQuery\uf8ff')
-          .get();
+      // 3. Search Opportunities
+      var oppSnap = await FirebaseFirestore.instance.collection('Opportunity').get();
       for (var doc in oppSnap.docs) {
         var data = doc.data();
-        data['displayTitle'] = data['Title'];
-        data['origin'] = 'Opportunity';
-        tempResults.add(data);
+        String title = (data['Title'] ?? "").toString().toLowerCase();
+        if (title.contains(_searchQuery)) {
+          data['displayTitle'] = data['Title'];
+          data['origin'] = 'Opportunity';
+          tempResults.add(data);
+        }
       }
     } catch (e) {
       debugPrint("Search Error: $e");
     }
 
     setState(() {
-      searchResults = tempResults;
-      isLoading = false;
+      _searchResults = tempResults;
+      _isLoading = false;
     });
   }
 
@@ -90,20 +120,23 @@ class _SearchPageState extends State<SearchPage> {
     const Color fueRed = Color(0xffb1170c);
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text("Search FUE Connect"),
         elevation: 0,
+        backgroundColor: fueRed,
+        foregroundColor: Colors.white,
       ),
       body: Column(
         children: [
-          // Search Bar Section
+          // Header Search Bar
           Container(
             padding: const EdgeInsets.all(16.0),
             decoration: const BoxDecoration(
               color: fueRed,
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
+                bottomLeft: Radius.circular(25),
+                bottomRight: Radius.circular(25),
               ),
             ),
             child: TextField(
@@ -114,102 +147,152 @@ class _SearchPageState extends State<SearchPage> {
                 hintText: "Search clubs, events, or jobs...",
                 hintStyle: const TextStyle(color: Colors.white70),
                 prefixIcon: const Icon(Icons.search, color: Colors.white),
-                suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: Colors.white),
-                        onPressed: () {
-                          _searchController.clear();
-                          _performSearch("");
-                        },
-                      )
-                    : null,
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.2),
+                fillColor: Colors.white.withOpacity(0.15),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
                   borderSide: BorderSide.none,
                 ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
             ),
           ),
 
-          // Results List
+          // Dynamic Body
           Expanded(
-            child: isLoading
+            child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: fueRed))
-                : searchResults.isEmpty
+                : _searchQuery.isEmpty
                     ? _buildEmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        itemCount: searchResults.length,
-                        itemBuilder: (context, index) {
-                          final item = searchResults[index];
-                          return _buildResultTile(item);
-                        },
-                      ),
+                    : _searchResults.isEmpty
+                        ? _buildNoResultsState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _searchResults.length,
+                            itemBuilder: (context, index) => _buildResultTile(_searchResults[index]),
+                          ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildResultTile(Map<String, dynamic> item) {
-    IconData icon;
-    Color color;
+  // --- SUB-WIDGETS ---
 
-    switch (item['origin']) {
-      case 'Clubs':
-        icon = Icons.groups_rounded;
-        color = Colors.blue;
-        break;
-      case 'Events':
-        icon = Icons.event_available_rounded;
-        color = Colors.orange;
-        break;
-      default:
-        icon = Icons.work_outline_rounded;
-        color = Colors.green;
-    }
+  Widget _buildEmptyState() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Recently Viewed
+          if (_recentlyViewed.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 16, 10),
+              child: Text("Recently Viewed", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            ..._recentlyViewed.map((item) => _buildResultTile(item, isRecent: true)).toList(),
+            const Divider(height: 40, indent: 20, endIndent: 20),
+          ],
 
-    return Card(
-      elevation: 1,
-      margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.1),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(
-          item['displayTitle'] ?? "Untitled",
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          item['origin'],
-          style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-        onTap: () {
-          // Navigate to the correct page based on origin
-          String route = '/${item['origin'].toLowerCase()}';
-          if (item['origin'] == 'Opportunity') route = '/opportunities';
-          Navigator.pushNamed(context, route);
-        },
+          // Recommended For You
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 10, 16, 15),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Colors.orange, size: 20),
+                SizedBox(width: 8),
+                Text("Recommended for You", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          _buildRecommendationCard(
+            title: "Robotics Workshop 2024",
+            category: "Events",
+            color: Colors.orange,
+            icon: Icons.precision_manufacturing,
+          ),
+          _buildRecommendationCard(
+            title: "Business Analytics Club",
+            category: "Clubs",
+            color: Colors.blue,
+            icon: Icons.insights,
+          ),
+          _buildRecommendationCard(
+            title: "Junior Flutter Developer",
+            category: "Opportunity",
+            color: Colors.green,
+            icon: Icons.code,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildResultTile(Map<String, dynamic> item, {bool isRecent = false}) {
+    Color originColor;
+    IconData icon;
+
+    switch (item['origin']) {
+      case 'Clubs': originColor = Colors.blue; icon = Icons.groups; break;
+      case 'Events': originColor = Colors.orange; icon = Icons.event; break;
+      default: originColor = Colors.green; icon = Icons.work;
+    }
+
+    return ListTile(
+      leading: Icon(isRecent ? Icons.history : icon, color: isRecent ? Colors.grey : originColor),
+      title: Text(item['displayTitle'] ?? "Untitled", style: const TextStyle(fontWeight: FontWeight.w500)),
+      subtitle: Text(item['origin'], style: TextStyle(color: originColor, fontSize: 12)),
+      trailing: const Icon(Icons.chevron_right, size: 18),
+      onTap: () {
+        _addToRecent(item);
+        String route = '/${item['origin'].toLowerCase()}';
+        if (item['origin'] == 'Opportunity') route = '/opportunities';
+        Navigator.pushNamed(context, route);
+      },
+    );
+  }
+
+  Widget _buildRecommendationCard({required String title, required String category, required Color color, required IconData icon}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(category.toUpperCase(), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                const SizedBox(height: 2),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              ],
+            ),
+          ),
+          const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoResultsState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.manage_search_rounded, size: 80, color: Colors.grey[200]),
+          Icon(Icons.search_off_rounded, size: 60, color: Colors.grey[300]),
           const SizedBox(height: 16),
-          Text(
-            searchQuery.isEmpty ? "Find your favorite campus activities" : "No matches found for '$searchQuery'",
-            style: const TextStyle(color: Colors.grey),
-          ),
+          Text("No matches for '$_searchQuery'", style: const TextStyle(color: Colors.grey)),
         ],
       ),
     );

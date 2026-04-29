@@ -39,8 +39,6 @@ dependencies:
   firebase_core: ^2.25.4
   # Firebase Authentication
   firebase_auth: ^4.17.4
-  # Google Sign-In
-  google_sign_in: ^6.2.1
   # Cloud Firestore (Database)
   cloud_firestore: ^4.17.5
   # Firebase Storage (File uploads)
@@ -55,7 +53,8 @@ dependencies:
   shared_preferences: ^2.2.2
   carousel_slider: ^4.2.1 
 
-
+file_picker: ^6.1.1
+firebase_storage: ^11.6.0
 
 dev_dependencies:
   flutter_test:

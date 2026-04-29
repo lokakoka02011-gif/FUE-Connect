@@ -1,11 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:fue_connect/screens/features/admin/ManageItemsPage.dart';
 import 'package:fue_connect/services/auth_service.dart'; // Import your auth service
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class AdminDashboardPage extends StatelessWidget {
+class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({super.key});
 
-  // Function to handle logout and return to login screen
+  @override
+  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
+}
+
+class _AdminDashboardPageState extends State<AdminDashboardPage> {  
+  int totalUsers = 0;
+  int totalApplications = 0;
+  int totalOpportunities = 0;
+
+  bool isLoading = true;
+  Future<void> fetchStats() async {
+    final users = await FirebaseFirestore.instance.collection('users').get();
+    final applications = await FirebaseFirestore.instance.collection('applications').get();
+    final opportunities = await FirebaseFirestore.instance.collection('opportunities').get();
+
+    setState(() {
+      totalUsers = users.docs.length;
+      totalApplications = applications.docs.length;
+      totalOpportunities = opportunities.docs.length;
+      isLoading = false;
+    });
+  }
   void _handleLogout(BuildContext context) async {
     final authService = AuthService();
     await authService.signOut();
@@ -14,13 +36,18 @@ class AdminDashboardPage extends StatelessWidget {
   }
 
   @override
+  void initState() {
+  super.initState();
+  fetchStats();
+  }
+  @override
   Widget build(BuildContext context) {
     // collectionKey is the actual name of your Firestore collection
     final List<Map<String, dynamic>> sections = [
-      {"title": "Clubs", "icon": Icons.groups, "collectionKey": "clubs"},
-      {"title": "Events", "icon": Icons.event, "collectionKey": "events"},
-      {"title": "Opportunities", "icon": Icons.work, "collectionKey": "opportunities"},
-      {"title": "Volunteering", "icon": Icons.volunteer_activism, "collectionKey": "volunteering"},
+      {"title": "Clubs", "icon": Icons.groups, "collectionKey": "Clubs"},
+      {"title": "Events", "icon": Icons.event, "collectionKey": "Events"},
+      {"title": "Opportunities", "icon": Icons.work, "collectionKey": "Opportunity"},
+      {"title": "Volunteering", "icon": Icons.volunteer_activism, "collectionKey": "Volunteering"},
     ];
 
     const Color fueRed = Color(0xffb1170c);
@@ -49,6 +76,21 @@ class AdminDashboardPage extends StatelessWidget {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ),
+          
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildStatCard("Users", totalUsers),
+                      _buildStatCard("Applications", totalApplications),
+                      _buildStatCard("Opportunities", totalOpportunities),
+                    ],
+                  ),
+          ),
+
           Expanded(
             child: GridView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -112,4 +154,28 @@ class AdminDashboardPage extends StatelessWidget {
       ),
     );
   }
+  Widget _buildStatCard(String title, int value) {
+    return Expanded(
+      child: Card(
+        elevation: 3,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Text(title, style: const TextStyle(fontSize: 14)),
+              const SizedBox(height: 5),
+              Text(
+                value.toString(),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xffb1170c),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }  
 }

@@ -20,55 +20,70 @@ class _NotificationPageState extends State<NotificationPage> {
     "Opportunity"
   ];
 
-  // Matches your Firestore "studentRef" format exactly
-  String get studentPath =>
-      "/Students/${FirebaseAuth.instance.currentUser?.uid}";
+  String get studentPath => "/Students/${FirebaseAuth.instance.currentUser?.uid}";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white, // Clean white background
       appBar: AppBar(
-        title: const Text("Notifications",
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Notifications"),
         backgroundColor: const Color(0xffb1170c),
-        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: Column(
         children: [
-          // 1. Category Filter Section
+          // 1. IMPROVED CATEGORY BAR (Matches your Screenshot)
           Container(
-            color: const Color(0xffb1170c),
-            padding: const EdgeInsets.only(bottom: 12),
-            child: SingleChildScrollView(
+            height: 60,
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: _categories.map((cat) {
-                  bool isSelected = _selectedCategory == cat;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ChoiceChip(
-                      label: Text(cat),
-                      selected: isSelected,
-                      selectedColor: Colors.white,
-                      backgroundColor: Colors.white24,
-                      labelStyle: TextStyle(
-                        color:
-                            isSelected ? const Color(0xffb1170c) : Colors.white,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
+              itemCount: _categories.length,
+              itemBuilder: (context, index) {
+                String cat = _categories[index];
+                bool isSelected = _selectedCategory == cat;
+
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedCategory = cat),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xffb1170c) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xffb1170c), // Always red border
+                        width: 1.5,
                       ),
-                      onSelected: (val) =>
-                          setState(() => _selectedCategory = cat),
                     ),
-                  );
-                }).toList(),
-              ),
+                    child: Center(
+                      child: Row(
+                        children: [
+                          if (isSelected)
+                            const Icon(Icons.check, color: Colors.white, size: 16),
+                          if (isSelected) const SizedBox(width: 5),
+                          Text(
+                            cat,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.black87,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
 
-          // 2. Dynamic Notification List
+          // 2. DYNAMIC NOTIFICATION LIST
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -80,18 +95,30 @@ class _NotificationPageState extends State<NotificationPage> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                      child: Text("No notifications for you yet."));
-                }
-
-                // Filter by category locally
-                final docs = snapshot.data!.docs.where((doc) {
+                
+                // Filter locally
+                final docs = snapshot.data?.docs.where((doc) {
                   if (_selectedCategory == "All") return true;
-                  String type =
-                      doc['notification_type'].toString().replaceAll('"', '');
+                  String type = doc['notification_type'].toString().replaceAll('"', '');
                   return type.toLowerCase() == _selectedCategory.toLowerCase();
-                }).toList();
+                }).toList() ?? [];
+
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.notifications_off_outlined, 
+                             size: 64, color: Colors.grey[300]),
+                        const SizedBox(height: 16),
+                        Text(
+                          "No $_selectedCategory notifications yet.",
+                          style: const TextStyle(color: Colors.grey, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
                 return ListView.builder(
                   itemCount: docs.length,
@@ -99,63 +126,50 @@ class _NotificationPageState extends State<NotificationPage> {
                   itemBuilder: (context, index) {
                     var doc = docs[index];
                     var data = doc.data() as Map<String, dynamic>;
-
-                    // Logic: If isRead doesn't exist in Firebase yet, treat as false (unread)
-                    bool isRead =
-                        data.containsKey('isRead') ? data['isRead'] : false;
-
+                    bool isRead = data['isRead'] ?? false;
                     DateTime dt = (data['timestamp'] as Timestamp).toDate();
-                    String timeLabel =
-                        DateFormat('jm').format(dt); // e.g. 5:47 PM
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      elevation: isRead ? 0 : 2,
-                      color: isRead ? Colors.grey[50] : Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(
-                          color: isRead
-                              ? Colors.transparent
-                              : const Color(0xffb1170c).withOpacity(0.2),
-                        ),
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isRead ? Colors.white : const Color(0xfffdf2f1), // Light red tint for unread
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 5,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
                       ),
                       child: ListTile(
+                        contentPadding: const EdgeInsets.all(12),
                         leading: CircleAvatar(
-                          backgroundColor: isRead
-                              ? Colors.grey[300]
-                              : const Color(0xffb1170c),
+                          backgroundColor: isRead ? Colors.grey[200] : const Color(0xffb1170c),
                           child: Icon(
-                            isRead
-                                ? Icons.notifications_none
-                                : Icons.notifications_active,
-                            color: Colors.white,
+                            _getIconForType(data['notification_type']),
+                            color: isRead ? Colors.grey : Colors.white,
                             size: 20,
                           ),
                         ),
                         title: Text(
                           data['notification_message'] ?? "",
                           style: TextStyle(
-                            fontWeight:
-                                isRead ? FontWeight.normal : FontWeight.bold,
-                            fontSize: 15,
+                            fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                            color: Colors.black87,
                           ),
                         ),
-                        subtitle: Row(
-                          children: [
-                            Text(data['notification_type']
-                                    ?.toString()
-                                    .replaceAll('"', '') ??
-                                ""),
-                            const Text(" • "),
-                            Text(timeLabel),
-                          ],
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            DateFormat('MMM d, h:mm a').format(dt),
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ),
-                        onTap: () {
-                          // AUTOMATION: Click updates Firebase without you doing anything
-                          doc.reference.update({'isRead': true});
-                        },
+                        trailing: !isRead 
+                          ? const CircleAvatar(radius: 4, backgroundColor: Color(0xffb1170c)) 
+                          : null,
+                        onTap: () => doc.reference.update({'isRead': true}),
                       ),
                     );
                   },
@@ -166,5 +180,15 @@ class _NotificationPageState extends State<NotificationPage> {
         ],
       ),
     );
+  }
+
+  // Helper to make the list look organized with icons
+  IconData _getIconForType(dynamic type) {
+    String t = type.toString().toLowerCase();
+    if (t.contains("club")) return Icons.group_work_rounded;
+    if (t.contains("event")) return Icons.event_note_rounded;
+    if (t.contains("opp")) return Icons.work_outline_rounded;
+    if (t.contains("app")) return Icons.assignment_turned_in_rounded;
+    return Icons.notifications_active_outlined;
   }
 }

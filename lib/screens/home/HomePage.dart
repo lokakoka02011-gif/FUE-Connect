@@ -1,5 +1,6 @@
-import 'dart:async'; // Required for the automatic timer
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -10,10 +11,12 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late PageController _pageController;
-  int _currentPage = 0;
+  int _currentPage = 5000;
   late Timer _timer;
 
-  // 1. SLIDESHOW IMAGES
+  // Change this variable to 0 and the red dot/number will vanish!
+  int notificationCount = 0; 
+
   final List<String> slideshowImages = const [
     "assets/images/slideshow.png",
     "assets/images/slideshow (2).png",
@@ -22,52 +25,13 @@ class _HomePageState extends State<HomePage> {
     "assets/images/slideshow (5).png",
   ];
 
-  // 2. RECOMMENDED ITEMS DATA
-  final List<Map<String, dynamic>> recommendedItems = const [
-    {
-      "type": "volunteer",
-      "title": "Campus Green Initiative",
-      "subtitle": "FUE Sustainability Club",
-      "image": "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=400",
-      "route": "/volunteer",
-    },
-    {
-      "type": "event",
-      "title": "Spring Career Fair",
-      "subtitle": "Main Hall",
-      "image": "https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=400",
-      "route": "/events",
-    },
-    {
-      "type": "opportunity",
-      "title": "Software Internship",
-      "subtitle": "IT Department",
-      "image": "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=400",
-      "route": "/opportunities",
-    },
-    {
-      "type": "club",
-      "title": "Robotics Club",
-      "subtitle": "Engineering",
-      "image": "https://images.unsplash.com/photo-1535378917042-10a22c95931a?q=80&w=400",
-      "route": "/clubs",
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.9, initialPage: 0);
-
-    // --- SETUP AUTOMATIC TIMER ---
+    _pageController = PageController(viewportFraction: 1.0, initialPage: _currentPage);
     _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
-      if (_currentPage < slideshowImages.length - 1) {
-        _currentPage++;
-      } else {
-        _currentPage = 0;
-      }
-
       if (_pageController.hasClients) {
+        _currentPage++;
         _pageController.animateToPage(
           _currentPage,
           duration: const Duration(milliseconds: 350),
@@ -79,7 +43,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    _timer.cancel(); // Stop timer to prevent memory leaks
+    _timer.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -88,66 +52,51 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- SEARCH BAR ---
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const TextField(
-                    decoration: InputDecoration(
-                      hintText: "Search for clubs, events...",
-                      border: InputBorder.none,
-                      icon: Icon(Icons.search, color: Colors.grey),
+              // --- FULL WIDTH AUTOMATIC SLIDESHOW ---
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    height: 200,
+                    child: PageView.builder(
+                      itemCount: 10000,
+                      controller: _pageController,
+                      onPageChanged: (index) => setState(() => _currentPage = index),
+                      itemBuilder: (context, index) {
+                        return Image.asset(
+                          slideshowImages[index % slideshowImages.length],
+                          fit: BoxFit.cover,
+                        );
+                      },
                     ),
                   ),
-                ),
+                  Positioned(
+                    left: 10,
+                    child: _buildNavArrow(Icons.chevron_left, () {
+                      _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                    }),
+                  ),
+                  Positioned(
+                    right: 10,
+                    child: _buildNavArrow(Icons.chevron_right, () {
+                      _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                    }),
+                  ),
+                ],
               ),
 
-              // --- AUTOMATIC SLIDESHOW ---
-              SizedBox(
-                height: 200,
-                child: PageView.builder(
-                  itemCount: slideshowImages.length,
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    return Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(15),
-                        image: DecorationImage(
-                          image: AssetImage(slideshowImages[index]),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              const SizedBox(height: 20),
 
-              const SizedBox(height: 15),
-
-              // --- CATEGORIES SECTION ---
+              // --- CATEGORIES ---
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  "Categories",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                child: Text("Categories", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 10),
               SizedBox(
@@ -156,121 +105,46 @@ class _HomePageState extends State<HomePage> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   children: const [
-                    CategoryItem(
-                        icon: Icons.group_rounded,
-                        label: "Clubs",
-                        routeName: "/clubs"),
-                    CategoryItem(
-                        icon: Icons.event_available_rounded,
-                        label: "Events",
-                        routeName: "/events"),
-                    CategoryItem(
-                        icon: Icons.volunteer_activism_rounded,
-                        label: "Volunteer",
-                        routeName: "/volunteer"),
-                    CategoryItem(
-                        icon: Icons.work_rounded,
-                        label: "Opportunities",
-                        routeName: "/opportunities"),
+                    CategoryItem(icon: Icons.group_rounded, label: "Clubs", routeName: "/clubs"),
+                    CategoryItem(icon: Icons.event_available_rounded, label: "Events", routeName: "/events"),
+                    CategoryItem(icon: Icons.volunteer_activism_rounded, label: "Volunteer", routeName: "/volunteer"),
+                    CategoryItem(icon: Icons.work_rounded, label: "Opportunities", routeName: "/opportunities"),
                   ],
                 ),
               ),
 
-              // --- RECOMMENDED SECTION ---
+              const Divider(thickness: 1, height: 30),
+
+              // --- POSTS SECTION (FIREBASE) ---
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                child: Text(
-                  "Recommended for you",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text("Latest Posts", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
+              const SizedBox(height: 10),
+              
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collectionGroup('posts')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) return const Center(child: Text("Error loading posts"));
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
-              SizedBox(
-                height: 260,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.only(right: 12),
-                  itemCount: recommendedItems.length,
-                  itemBuilder: (context, index) {
-                    final item = recommendedItems[index];
+                  final docs = snapshot.data!.docs;
+                  if (docs.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("No posts yet.")));
 
-                    return GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, item["route"]),
-                      child: Container(
-                        width: 200,
-                        margin: const EdgeInsets.only(left: 12, bottom: 10),
-                        child: Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15)),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(15)),
-                                child: Image.network(
-                                  item["image"],
-                                  height: 120,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                    height: 120,
-                                    color: Colors.grey[200],
-                                    child: const Icon(Icons.broken_image,
-                                        color: Colors.grey),
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xffb1170c)
-                                            .withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        item["type"].toString().toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Color(0xffb1170c),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      item["title"],
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      item["subtitle"],
-                                      style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = docs[index];
+                      final data = doc.data() as Map<String, dynamic>;
+                      final clubId = doc.reference.parent.parent!.id;
+                      return _buildPostCard(data, clubId);
+                    },
+                  );
+                },
               ),
               const SizedBox(height: 20),
             ],
@@ -279,21 +153,116 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  // Same helper methods as before...
+  Widget _buildPostCard(Map<String, dynamic> post, String clubId) {
+    String timeDisplay = "Recently";
+    if (post["createdAt"] != null) {
+      DateTime dt = (post["createdAt"] as Timestamp).toDate();
+      timeDisplay = "${dt.day}/${dt.month} ${dt.hour}:${dt.minute}";
+    }
+    return GestureDetector(
+      onTap: () {
+        _openPostDetails(post, clubId);
+      },
+      child: Container(      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: const Color(0xffb1170c).withOpacity(0.1),
+              child: const Icon(Icons.group, color: Color(0xffb1170c), size: 20),
+            ),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    clubId,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  Text(
+                    post["title"] ?? "Post",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ],
+              ),
+            subtitle: Text(timeDisplay, style: const TextStyle(fontSize: 12)),
+            trailing: const Icon(Icons.more_horiz),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4),
+            child: Text(post["content"] ?? "", style: const TextStyle(fontSize: 14, color: Colors.black87)),
+          ),
+          const SizedBox(height: 10),
+          if (post["imageUrl"] != null && post["imageUrl"].toString().isNotEmpty)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+              child: Image.network(post["imageUrl"], height: 200, width: double.infinity, fit: BoxFit.cover),
+            ),
+        ],
+      ),
+      ),
+    );
+  }
+
+  Widget _buildNavArrow(IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(color: Colors.black.withOpacity(0.3), shape: BoxShape.circle),
+        child: Icon(icon, color: Colors.white, size: 24),
+      ),
+    );
+  }
+  void _openPostDetails(Map<String, dynamic> post, String clubId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  post["title"] ?? "Post",
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  post["content"] ?? "",
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 15),
+                if (post["imageUrl"] != null && post["imageUrl"].toString().isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(post["imageUrl"]),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
-// --- WIDGET CLASSES DEFINED OUTSIDE OF HOMEPAGE STATE ---
-
+// CategoryItem class stays the same as previous...
 class CategoryItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final String routeName;
-
-  const CategoryItem({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.routeName,
-  });
+  const CategoryItem({super.key, required this.icon, required this.label, required this.routeName});
 
   @override
   Widget build(BuildContext context) {
@@ -308,18 +277,11 @@ class CategoryItem extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xffb1170c).withOpacity(0.05),
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: const Color(0xffb1170c).withOpacity(0.05), shape: BoxShape.circle),
               child: Icon(icon, size: 28, color: const Color(0xffb1170c)),
             ),
             const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center,
-            ),
+            Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
           ],
         ),
       ),

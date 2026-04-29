@@ -23,7 +23,11 @@ class AddEditItemPage extends StatefulWidget {
 class _AddEditItemPageState extends State<AddEditItemPage> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController descController = TextEditingController();
-  
+  final TextEditingController requirementsController = TextEditingController();
+  final TextEditingController deadlineController = TextEditingController();
+  final TextEditingController locationController = TextEditingController();
+
+
   File? _selectedImage;
   String? _existingImageUrl;
   bool _isLoading = false;
@@ -35,6 +39,9 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
       titleController.text = widget.itemData!["title"] ?? "";
       descController.text = widget.itemData!["description"] ?? "";
       _existingImageUrl = widget.itemData!["imageUrl"];
+      requirementsController.text = widget.itemData!["requirements"] ?? "";
+      deadlineController.text = widget.itemData!["deadline"] ?? "";
+      locationController.text = widget.itemData!["location"] ?? "";      
     }
   }
 
@@ -50,8 +57,14 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
 
   // --- FIREBASE UPLOAD LOGIC ---
   Future<void> saveItem() async {
-    if (titleController.text.isEmpty) return;
-
+    if (titleController.text.isEmpty ||
+        descController.text.isEmpty ||
+        requirementsController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all required fields")),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
 
     try {
@@ -71,8 +84,11 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
       final data = {
         "title": titleController.text,
         "description": descController.text,
+        "requirements": requirementsController.text,
+        "deadline": deadlineController.text,
+        "location": locationController.text,
         "imageUrl": imageUrl,
-        "updatedAt": Timestamp.now(),
+        "updatedAt": FieldValue.serverTimestamp(),
       };
 
       // 2. Save to Firestore
@@ -109,7 +125,8 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // --- IMAGE PREVIEW SECTION ---
+                
+                const SizedBox(height: 15),                
                 GestureDetector(
                   onTap: _pickImage,
                   child: Container(
@@ -133,11 +150,47 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
                   decoration: const InputDecoration(labelText: "Title", border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 15),
+
                 TextField(
                   controller: descController,
                   maxLines: 4,
-                  decoration: const InputDecoration(labelText: "Description", border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                    labelText: "Description",
+                    border: OutlineInputBorder(),
+                  ),
                 ),
+
+                const SizedBox(height: 15),
+
+                TextField(
+                  controller: requirementsController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: "Requirements",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                TextField(
+                  controller: deadlineController,
+                  decoration: const InputDecoration(
+                    labelText: "Deadline",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                TextField(
+                  controller: locationController,
+                  decoration: const InputDecoration(
+                    labelText: "Location",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,

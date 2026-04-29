@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+// Import your main.dart to access UniversalConnectCard and CategoryPill
+import 'package:fue_connect/main.dart'; 
 
 class EventsPage extends StatefulWidget {
   const EventsPage({super.key});
@@ -11,147 +14,136 @@ class EventsPage extends StatefulWidget {
 class _EventsPageState extends State<EventsPage> {
   String _searchQuery = "";
   String _selectedCategory = "All";
-  String _sortBy = "Upcoming"; // Default sort
+  String _sortBy = "Upcoming";
+  final List<String> _categories = ['All', 'Workshops', 'Sports', 'Tech', 'Music'];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('FUE Connect Events')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('FUE Events'),
+        elevation: 0,
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Search Bar
+          // 1. CONSISTENT SEARCH BAR
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Search events...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.search, color: Color(0xffb1170c)),
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
           ),
 
-          // 2. Category & Sort Row
+          // 2. UNIVERSAL CATEGORY PILLS
+          SizedBox(
+            height: 45,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _categories.length,
+              itemBuilder: (context, index) {
+                return CategoryPill(
+                  label: _categories[index],
+                  isSelected: _selectedCategory == _categories[index],
+                  onTap: () => setState(() => _selectedCategory = _categories[index]),
+                );
+              },
+            ),
+          ),
+
+          // 3. SORT & HEADER ROW
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text("Categories", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text("Upcoming Events", 
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 DropdownButton<String>(
                   value: _sortBy,
                   underline: const SizedBox(),
-                  icon: const Icon(Icons.sort, color: Color(0xffb1170c)),
+                  icon: const Icon(Icons.sort, color: Color(0xffb1170c), size: 20),
                   items: ['Upcoming', 'Popular'].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value, style: const TextStyle(fontSize: 14)),
-                    );
+                    return DropdownMenuItem(value: value, child: Text(value, style: const TextStyle(fontSize: 14)));
                   }).toList(),
-                  onChanged: (newValue) {
-                    setState(() => _sortBy = newValue!);
-                  },
+                  onChanged: (val) => setState(() => _sortBy = val!),
                 ),
               ],
             ),
           ),
-          
-          const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: ['All', 'Workshops', 'Sports', 'Tech', 'Music'].map((cat) {
-                bool isSelected = _selectedCategory == cat;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ChoiceChip(
-                    label: Text(cat),
-                    selected: isSelected,
-                    selectedColor: const Color(0xffb1170c),
-                    labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
-                    onSelected: (bool selected) {
-                      setState(() => _selectedCategory = cat);
-                    },
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
 
-          const SizedBox(height: 20),
-
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text("Live Events", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
-
+          // 4. EVENTS LIST USING UNIVERSAL CARD
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('Events').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) return const Center(child: Text("Error loading events"));
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator(color: Color(0xffb1170c)));
                 }
 
-                // Filtering and Sorting Logic
                 List<QueryDocumentSnapshot> docs = snapshot.data!.docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final name = (data['name'] ?? "").toString().toLowerCase();
                   final category = data['category'] ?? "All";
                   
-                  // Hide if event date is in the past
-                  DateTime eventDate = DateTime.now();
-                  if (data['date'] is Timestamp) {
-                    eventDate = (data['date'] as Timestamp).toDate();
-                  }
-                  bool isExpired = eventDate.isBefore(DateTime.now());
+                  // Date Filtering: Hide expired events
+                  DateTime eventDate = (data['date'] as Timestamp).toDate();
+                  bool isExpired = eventDate.isBefore(DateTime.now().subtract(const Duration(hours: 5)));
 
-                  bool matchesSearch = name.contains(_searchQuery);
-                  bool matchesCategory = _selectedCategory == "All" || category == _selectedCategory;
-
-                  return matchesSearch && matchesCategory && !isExpired; // Point 2: Disappear if ended
+                  return name.contains(_searchQuery) && 
+                         (_selectedCategory == "All" || category == _selectedCategory) &&
+                         !isExpired;
                 }).toList();
 
-                // Point 3: Sorting logic
+                // Sorting Logic
                 if (_sortBy == "Upcoming") {
-                  docs.sort((a, b) {
-                    var d1 = (a.data() as Map<String, dynamic>)['date'] as Timestamp;
-                    var d2 = (b.data() as Map<String, dynamic>)['date'] as Timestamp;
-                    return d1.compareTo(d2);
-                  });
-                } else if (_sortBy == "Popular") {
-                  docs.sort((a, b) {
-                    var p1 = (a.data() as Map<String, dynamic>)['participants'] ?? 0;
-                    var p2 = (b.data() as Map<String, dynamic>)['participants'] ?? 0;
-                    return p2.compareTo(p1);
-                  });
+                  docs.sort((a, b) => ((a['date'] as Timestamp)).compareTo(b['date'] as Timestamp));
+                } else {
+                  docs.sort((a, b) => (b['participants'] ?? 0).compareTo(a['participants'] ?? 0));
                 }
 
-                if (docs.isEmpty) return const Center(child: Text("No upcoming events found."));
+                if (docs.isEmpty) return const Center(child: Text("No events found."));
 
                 return ListView.builder(
                   itemCount: docs.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemBuilder: (context, index) {
                     var data = docs[index].data() as Map<String, dynamic>;
-
-                    DateTime eventDateTime = DateTime.now();
-                    if (data['date'] is Timestamp) {
-                      eventDateTime = (data['date'] as Timestamp).toDate();
-                    }
+                    DateTime dt = (data['date'] as Timestamp).toDate();
                     
-                    String displayDate = "${eventDateTime.day}/${eventDateTime.month}/${eventDateTime.year}";
-                    bool hasEnded = eventDateTime.isBefore(DateTime.now());
-
-                    return _buildEventCard(
-                      title: data['name'] ?? "Event Name",
-                      date: displayDate,
-                      location: data['location'] ?? "FUE Campus",
-                      imageUrl: data['imageUrl'] ?? "https://via.placeholder.com/150",
-                      hasEnded: hasEnded, // Point 1: Pass state to card
+                    return UniversalConnectCard(
+                      title: data['name'] ?? "Event",
+                      subtitle: data['description'] ?? "",
+                      imageUrl: data['imageUrl'],
+                      onTap: () => _showEventDetails(context, data),
+                      infoRows: [
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_month, size: 16, color: Color(0xffb1170c)),
+                            const SizedBox(width: 5),
+                            Text(DateFormat('MMM dd, yyyy').format(dt), 
+                              style: TextStyle(color: Colors.grey[800], fontWeight: FontWeight.w500)),
+                            const Spacer(),
+                            const Icon(Icons.people, size: 16, color: Colors.blueGrey),
+                            const SizedBox(width: 4),
+                            Text("${data['participants'] ?? 0} joined", 
+                              style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
                     );
                   },
                 );
@@ -163,93 +155,63 @@ class _EventsPageState extends State<EventsPage> {
     );
   }
 
-  Widget _buildEventCard({
-    required String title,
-    required String date,
-    required String location,
-    required String imageUrl,
-    required bool hasEnded,
-  }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(
-          color: hasEnded ? Colors.grey : const Color(0xffb1170c), 
-          width: 2
+  void _showEventDetails(BuildContext context, Map<String, dynamic> data) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
-      ),
-      elevation: 4,
-      child: Column(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-            child: ColorFiltered(
-              colorFilter: hasEnded 
-                ? const ColorFilter.mode(Colors.grey, BlendMode.saturation) 
-                : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
-              child: Image.network(
-                imageUrl,
-                height: 150,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 150, 
-                  color: Colors.grey[200], 
-                  child: const Icon(Icons.image_not_supported),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
+            const SizedBox(height: 20),
+            Text(data['name'] ?? 'Event', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 15),
+            _detailRow(Icons.location_on, "Location: ", data['location'] ?? "Campus"),
+            _detailRow(Icons.category, "Category: ", data['category'] ?? "General"),
+            _detailRow(Icons.timer, "Time: ", DateFormat('jm').format((data['date'] as Timestamp).toDate())),
+            const Divider(height: 30),
+            const Text("About Event", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(data['description'] ?? 'No description available.', style: TextStyle(color: Colors.grey[800], height: 1.4)),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xffb1170c),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
                 ),
+                onPressed: () {},
+                child: const Text("Register for Event", 
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(
-                  fontSize: 18, 
-                  fontWeight: FontWeight.bold,
-                  color: hasEnded ? Colors.grey : Colors.black
-                )),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                    const SizedBox(width: 5),
-                    Text(date, style: const TextStyle(color: Colors.grey)),
-                    if (hasEnded) ...[
-                      const SizedBox(width: 10),
-                      const Text("ENDED", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
-                    ]
-                  ],
-                ),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                    const SizedBox(width: 5),
-                    Text(location, style: const TextStyle(color: Colors.grey)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ElevatedButton(
-                    onPressed: hasEnded ? null : () {
-                      // Logic for joining event
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: hasEnded ? Colors.grey : const Color(0xffb1170c)
-                    ),
-                    child: Text(
-                      hasEnded ? "Event Ended" : "Join Event", 
-                      style: const TextStyle(color: Colors.white)
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: const Color(0xffb1170c)),
+          const SizedBox(width: 10),
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
     );

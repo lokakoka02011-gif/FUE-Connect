@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fue_connect/services/auth_service.dart';
 import 'package:fue_connect/screens/auth/register_screen.dart';
-import 'package:fue_connect/screens/features/admin/AdminDashboardPage.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

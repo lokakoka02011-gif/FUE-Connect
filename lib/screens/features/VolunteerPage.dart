@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
+// Import your main.dart to access UniversalConnectCard and CategoryPill
+import 'package:fue_connect/main.dart'; 
+
 class VolunteerPage extends StatefulWidget {
   const VolunteerPage({super.key});
 
@@ -9,124 +12,126 @@ class VolunteerPage extends StatefulWidget {
 }
 
 class _VolunteerPageState extends State<VolunteerPage> {
-  String searchQuery = "";
+  String _searchQuery = "";
+  String _selectedArea = "All";
+  final List<String> _impactAreas = ['All', 'Teaching', 'Environment', 'Charity', 'Events'];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('FUE Volunteer Hub'),
+        title: const Text('Volunteer Hub'),
+        elevation: 0,
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Search Section (Functional)
+          // 1. SEARCH BAR
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value.toLowerCase();
-                });
-              },
+              onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
               decoration: InputDecoration(
-                hintText: 'Search for opportunities...',
-                prefixIcon: const Icon(Icons.volunteer_activism),
+                hintText: 'Search volunteer roles...',
+                prefixIcon: const Icon(Icons.volunteer_activism, color: Color(0xffb1170c)),
+                filled: true,
+                fillColor: Colors.grey[100],
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
               ),
             ),
           ),
 
-          // 2. Impact Areas (UI Only)
+          // 2. IMPACT AREAS (Pills)
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Impact Areas",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text("Impact Areas", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+          SizedBox(
+            height: 45,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _impactAreas.length,
+              itemBuilder: (context, index) {
+                return CategoryPill(
+                  label: _impactAreas[index],
+                  isSelected: _selectedArea == _impactAreas[index],
+                  onTap: () => setState(() => _selectedArea = _impactAreas[index]),
+                );
+              },
             ),
           ),
+
           const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: ['All', 'Teaching', 'Environment', 'Charity', 'Events']
-                  .map((area) => Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Chip(
-                          label: Text(area),
-                          backgroundColor: Colors.red[50],
-                          side: BorderSide(color: Colors.red[100]!),
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ),
 
-          const SizedBox(height: 20),
-
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Current Opportunities",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-
-          // 3. Dynamic Opportunities List from Firestore
+          // 3. OPPORTUNITIES LIST
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('opportunities')
-                  .where('type', isEqualTo: 'volunteering') // Filter for volunteering
+                  .where('type', isEqualTo: 'volunteering')
                   .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Center(child: Text("Something went wrong"));
-                }
+                if (snapshot.hasError) return const Center(child: Text("Something went wrong"));
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator(color: Color(0xffb1170c)));
                 }
 
-                // Filter data based on search bar
                 final docs = snapshot.data!.docs.where((doc) {
-                  final title = doc['title'].toString().toLowerCase();
-                  return title.contains(searchQuery);
+                  final data = doc.data() as Map<String, dynamic>;
+                  final title = (data['title'] ?? "").toString().toLowerCase();
+                  final area = data['impactArea'] ?? "All"; // Assuming you have an 'impactArea' field
+                  
+                  return title.contains(_searchQuery) && 
+                         (_selectedArea == "All" || area == _selectedArea);
                 }).toList();
 
                 if (docs.isEmpty) {
-                  return const Center(child: Text("No volunteer roles found"));
+                  return const Center(child: Text("No volunteer roles found."));
                 }
 
                 return ListView.builder(
                   itemCount: docs.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemBuilder: (context, index) {
                     var data = docs[index].data() as Map<String, dynamic>;
-
-                    // Handling Date/Timestamp
+                    
+                    // Format deadline
                     String formattedDate = "No Deadline";
                     if (data['deadline'] != null) {
-                      Timestamp timestamp = data['deadline'];
-                      formattedDate = DateFormat('dd MMM yyyy').format(timestamp.toDate());
+                      formattedDate = DateFormat('dd MMM yyyy').format((data['deadline'] as Timestamp).toDate());
                     }
 
-                    // Handling Int64/Int Pay or Requirements Safely
-                    String payInfo = data['pay']?.toString() ?? "Unpaid";
-
-                    return buildVolunteerCard(
-                      title: data['title'] ?? 'No Title',
-                      organizer: data['companyName'] ?? 'FUE Partner',
-                      deadline: formattedDate,
-                      isUrgent: data['isUrgent'] ?? false,
-                      imageUrl: data['imageUrl'] ?? "https://via.placeholder.com/400",
-                      pay: payInfo,
+                    return UniversalConnectCard(
+                      title: data['title'] ?? 'Untitled',
+                      subtitle: "By ${data['companyName'] ?? 'FUE Partner'}",
+                      imageUrl: data['imageUrl'],
+                      // Urgent Badge logic
+                      trailing: data['isUrgent'] == true 
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(12)),
+                            child: const Text("URGENT", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ) 
+                        : null,
+                      infoRows: [
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                            const SizedBox(width: 5),
+                            Text("Deadline: $formattedDate", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            const Spacer(),
+                            const Icon(Icons.handshake_outlined, size: 14, color: Color(0xffb1170c)),
+                            const SizedBox(width: 4),
+                            Text(data['impactArea'] ?? "General", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                      onTap: () => _showVolunteerDetails(context, data),
                     );
                   },
                 );
@@ -138,107 +143,62 @@ class _VolunteerPageState extends State<VolunteerPage> {
     );
   }
 
-  static Widget buildVolunteerCard({
-    required String title,
-    required String organizer,
-    required String deadline,
-    required bool isUrgent,
-    required String imageUrl,
-    required String pay,
-  }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: const BorderSide(color: Color(0xffb1170c), width: 2),
-      ),
-      elevation: 8,
-      child: Column(
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                child: Image.network(
-                  imageUrl,
-                  height: 150,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.broken_image, size: 50),
+  void _showVolunteerDetails(BuildContext context, Map<String, dynamic> data) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
+            const SizedBox(height: 20),
+            Text(data['title'] ?? 'Volunteer Role', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Text("Organized by ${data['companyName'] ?? 'FUE Partner'}", style: const TextStyle(color: Color(0xffb1170c), fontWeight: FontWeight.w500)),
+            const Divider(height: 30),
+            _detailRow(Icons.public, "Impact Area: ", data['impactArea'] ?? "General"),
+            _detailRow(Icons.payments, "Compensation: ", data['pay']?.toString() ?? "Unpaid"),
+            const SizedBox(height: 20),
+            const Text("About the Role", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(data['description'] ?? 'Help your community by joining this initiative!', style: TextStyle(color: Colors.grey[800], height: 1.4)),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xffb1170c),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
+                onPressed: () {},
+                child: const Text("Apply to Volunteer", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-              if (isUrgent)
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      "URGENT",
-                      style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "By $organizer",
-                  style: const TextStyle(color: Color(0xffb1170c), fontWeight: FontWeight.w500),
-                ),
-                const Divider(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_month, size: 16, color: Colors.grey),
-                            const SizedBox(width: 5),
-                            Text(deadline, style: const TextStyle(color: Colors.grey)),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.payments, size: 16, color: Colors.grey),
-                            const SizedBox(width: 5),
-                            Text(pay, style: const TextStyle(color: Colors.grey)),
-                          ],
-                        ),
-                      ],
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Add navigation to a details page here
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xffb1170c),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text("Apply Now", style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ),
-              ],
             ),
-          ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
     );

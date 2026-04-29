@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fue_connect/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ ADDED
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -21,7 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true; // Added toggle state for confirm password
+  bool _obscureConfirmPassword = true;
 
   String _capitalize(String value) {
     if (value.isEmpty) return value;
@@ -52,31 +53,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     final String input = _emailController.text.trim();
     final String fullEmail = "$input@fue.edu.eg";
-    
-    // Logic: Exactly 8 digits = Student. Anything else = Admin.
+
     final bool isStudent = RegExp(r'^\d{8}$').hasMatch(input);
     final String userRole = isStudent ? "student" : "admin";
 
     try {
+      // ✅ Firebase Auth (your existing service)
       await _authService.registerWithEmail(
         email: fullEmail,
         password: _passwordController.text,
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
-        role: userRole, 
+        role: userRole,
       );
 
       User? user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        // ✅ Document ID logic
+        String docId = isStudent ? input : "admin_${user.uid}";
+
+        // ✅ Save in Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(docId)
+            .set({
+          'email': fullEmail,
+          'firstName': _firstNameController.text.trim(),
+          'lastName': _lastNameController.text.trim(),
+          'role': userRole,
+          'uid': user.uid,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // ✅ Email verification (unchanged)
       if (user != null && !user.emailVerified) {
         await user.sendEmailVerification();
       }
 
       if (mounted) _showSuccessDialog(fullEmail);
-      
+
     } on FirebaseAuthException catch (e) {
-      String message = e.code == 'email-already-in-use' 
-          ? "This email is already registered." 
+      String message = e.code == 'email-already-in-use'
+          ? "This email is already registered."
           : "Registration failed.";
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
@@ -120,8 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 const Icon(Icons.person_add, size: 60, color: Color(0xffb1170c)),
                 const SizedBox(height: 20),
-                
-                // First Name
+
                 TextFormField(
                   controller: _firstNameController,
                   textCapitalization: TextCapitalization.words,
@@ -134,7 +155,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Last Name
                 TextFormField(
                   controller: _lastNameController,
                   textCapitalization: TextCapitalization.words,
@@ -147,11 +167,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // University Email (Hidden Admin Entry)
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
-                    labelText: "University Email", 
+                    labelText: "University Email",
                     hintText: "e.g. 20250001",
                     suffixText: "@fue.edu.eg",
                     suffixStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
@@ -161,7 +180,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Password
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -182,7 +200,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Confirm Password (With Toggle)
                 TextFormField(
                   controller: _confirmPasswordController,
                   obscureText: _obscureConfirmPassword,
