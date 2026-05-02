@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fue_connect/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ ADDED
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -58,7 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final String userRole = isStudent ? "student" : "admin";
 
     try {
-      // ✅ Firebase Auth (your existing service)
+      // 1. Firebase Auth Registration
       await _authService.registerWithEmail(
         email: fullEmail,
         password: _passwordController.text,
@@ -70,10 +70,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       User? user = FirebaseAuth.instance.currentUser;
 
       if (user != null) {
-        // ✅ Document ID logic
+        // 2. Firestore Document Logic (Using ID as Doc Name for students)
         String docId = isStudent ? input : "admin_${user.uid}";
 
-        // ✅ Save in Firestore
         await FirebaseFirestore.instance
             .collection('users')
             .doc(docId)
@@ -85,23 +84,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'uid': user.uid,
           'createdAt': FieldValue.serverTimestamp(),
         });
-      }
 
-      // ✅ Email verification (unchanged)
-      if (user != null && !user.emailVerified) {
-        await user.sendEmailVerification();
-      }
+        // 3. Send Verification
+        if (!user.emailVerified) {
+          await user.sendEmailVerification();
+        }
 
-      if (mounted) _showSuccessDialog(fullEmail);
+        if (mounted) _showSuccessDialog(fullEmail);
+      }
 
     } on FirebaseAuthException catch (e) {
-      String message = e.code == 'email-already-in-use'
-          ? "This email is already registered."
-          : "Registration failed.";
+      String message = "Registration failed.";
+      
+      // ✅ Specific checks for the Firebase Console Password Rules
+      if (e.code == 'weak-password') {
+        message = "Password is too weak. Ensure it meets all safety requirements.";
+      } else if (e.code == 'email-already-in-use') {
+        message = "This university ID/Email is already registered.";
+      } else if (e.code == 'invalid-email') {
+        message = "The email address is not valid.";
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -119,8 +131,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Go back to Login
             },
             child: const Text("OK"),
           ),
@@ -145,11 +157,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 TextFormField(
                   controller: _firstNameController,
-                  textCapitalization: TextCapitalization.words,
-                  onChanged: (v) => _firstNameController.value = _firstNameController.value.copyWith(
-                    text: _capitalize(v),
-                    selection: TextSelection.collapsed(offset: _capitalize(v).length),
-                  ),
                   decoration: const InputDecoration(labelText: "First Name", border: OutlineInputBorder()),
                   validator: (v) => v!.isEmpty ? "Required" : null,
                 ),
@@ -157,11 +164,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 TextFormField(
                   controller: _lastNameController,
-                  textCapitalization: TextCapitalization.words,
-                  onChanged: (v) => _lastNameController.value = _lastNameController.value.copyWith(
-                    text: _capitalize(v),
-                    selection: TextSelection.collapsed(offset: _capitalize(v).length),
-                  ),
                   decoration: const InputDecoration(labelText: "Last Name", border: OutlineInputBorder()),
                   validator: (v) => v!.isEmpty ? "Required" : null,
                 ),
@@ -170,13 +172,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
-                    labelText: "University Email",
-                    hintText: "e.g. 20250001",
+                    labelText: "University ID",
+                    hintText: "e.g. 20221700",
                     suffixText: "@fue.edu.eg",
-                    suffixStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
                     border: OutlineInputBorder()
                   ),
-                  validator: (v) => v!.isEmpty ? "Enter your ID or Email" : null,
+                  validator: (v) => v!.isEmpty ? "Enter your 8-digit ID" : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -185,7 +186,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: "Password",
-                    helperText: "8+ chars, 1 uppercase, 1 number",
+                    helperText: "8+ chars, 1 Upper, 1 Number, 1 Special (!@#)",
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
@@ -194,7 +195,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   validator: (v) {
                     if (v == null || v.length < 8) return "Must be 8+ characters";
-                    if (!RegExp(r'^(?=.*?[A-Z])(?=.*?[0-9])').hasMatch(v)) return "Need 1 uppercase & 1 number";
+                    // ✅ Matches strict Firebase Console rules
+                    if (!RegExp(r'^(?=.*?[A-Z])(?=.*?[0-9])(?=.*?[!@#\$&*~])').hasMatch(v)) {
+                      return "Need uppercase, number, and symbol";
+                    }
                     return null;
                   },
                 ),

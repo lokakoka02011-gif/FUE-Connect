@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fue_connect/screens/features/admin/ManageItemsPage.dart';
-import 'package:fue_connect/services/auth_service.dart'; // Import your auth service
+import 'package:fue_connect/services/auth_service.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminDashboardPage extends StatefulWidget {
@@ -11,43 +11,27 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {  
-  int totalUsers = 0;
-  int totalApplications = 0;
-  int totalOpportunities = 0;
+  // Removed totalUsers, totalApplications, totalOpportunities, and fetchStats logic
 
-  bool isLoading = true;
-  Future<void> fetchStats() async {
-    final users = await FirebaseFirestore.instance.collection('users').get();
-    final applications = await FirebaseFirestore.instance.collection('applications').get();
-    final opportunities = await FirebaseFirestore.instance.collection('opportunities').get();
-
-    setState(() {
-      totalUsers = users.docs.length;
-      totalApplications = applications.docs.length;
-      totalOpportunities = opportunities.docs.length;
-      isLoading = false;
-    });
-  }
   void _handleLogout(BuildContext context) async {
     final authService = AuthService();
     await authService.signOut();
-    // Use pushNamedAndRemoveUntil to clear the navigation stack
     Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   @override
   void initState() {
-  super.initState();
-  fetchStats();
+    super.initState();
   }
+
   @override
   Widget build(BuildContext context) {
-    // collectionKey is the actual name of your Firestore collection
+    // Note: Ensure collectionKey matches your Firestore exactly (case-sensitive)
     final List<Map<String, dynamic>> sections = [
       {"title": "Clubs", "icon": Icons.groups, "collectionKey": "Clubs"},
       {"title": "Events", "icon": Icons.event, "collectionKey": "Events"},
       {"title": "Opportunities", "icon": Icons.work, "collectionKey": "Opportunity"},
-      {"title": "Volunteering", "icon": Icons.volunteer_activism, "collectionKey": "Volunteering"},
+      {"title": "Volunteering", "icon": Icons.volunteer_activism, "collectionKey": "volunteering"}, // Fixed key case
     ];
 
     const Color fueRed = Color(0xffb1170c);
@@ -77,19 +61,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ),
           ),
           
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildStatCard("Users", totalUsers),
-                      _buildStatCard("Applications", totalApplications),
-                      _buildStatCard("Opportunities", totalOpportunities),
-                    ],
-                  ),
-          ),
+          // Counters section has been removed from here
 
           Expanded(
             child: GridView.builder(
@@ -99,10 +71,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 crossAxisCount: 2,
                 crossAxisSpacing: 15,
                 mainAxisSpacing: 15,
-                childAspectRatio: 1.1, // Adjusts the height of the cards
+                childAspectRatio: 1.1,
               ),
               itemBuilder: (context, index) {
                 final section = sections[index];
+                // Fallback for empty titles
+                final String displayTitle = (section["title"] == null || section["title"].isEmpty) 
+                    ? "Unnamed Section" 
+                    : section["title"];
 
                 return InkWell(
                   onTap: () {
@@ -110,8 +86,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => ManageItemsPage(
-                          title: section["title"],
-                          collectionPath: section["collectionKey"], // Logic passed here
+                          title: displayTitle,
+                          collectionPath: section["collectionKey"] ?? "unknown",
                         ),
                       ),
                     );
@@ -121,27 +97,33 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         borderRadius: BorderRadius.circular(15)),
                     elevation: 4,
                     shadowColor: Colors.black26,
+                    color:fueRed,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: fueRed.withOpacity(0.1),
+                          decoration:const  BoxDecoration(
+                            color: Colors.white, // Fixed: Red background
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(section["icon"], size: 40, color: fueRed),
+                          child: Icon(
+                            section["icon"], 
+                            size: 40, 
+                            color: Colors.red // Fixed: White icon
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          section["title"],
+                          displayTitle,
                           style: const TextStyle(
+                            color: Colors.white,
                               fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 4),
                         const Text(
                           "Manage Data",
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                          style: TextStyle(fontSize: 12, color: Colors.white,)
                         )
                       ],
                     ),
@@ -154,28 +136,4 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       ),
     );
   }
-  Widget _buildStatCard(String title, int value) {
-    return Expanded(
-      child: Card(
-        elevation: 3,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Text(title, style: const TextStyle(fontSize: 14)),
-              const SizedBox(height: 5),
-              Text(
-                value.toString(),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xffb1170c),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }  
 }

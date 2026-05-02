@@ -99,19 +99,30 @@ class _HomePageState extends State<HomePage> {
                 child: Text("Categories", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 10),
-              SizedBox(
-                height: 100,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  children: const [
-                    CategoryItem(icon: Icons.group_rounded, label: "Clubs", routeName: "/clubs"),
-                    CategoryItem(icon: Icons.event_available_rounded, label: "Events", routeName: "/events"),
-                    CategoryItem(icon: Icons.volunteer_activism_rounded, label: "Volunteer", routeName: "/volunteer"),
-                    CategoryItem(icon: Icons.work_rounded, label: "Opportunities", routeName: "/opportunities"),
-                  ],
-                ),
-              ),
+SizedBox(
+  height: 100,
+  width: double.infinity, // Ensures it takes full device width
+  child: Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: const [
+        Expanded(
+          child: CategoryItem(icon: Icons.group_rounded, label: "Clubs", routeName: "/clubs"),
+        ),
+        Expanded(
+          child: CategoryItem(icon: Icons.event_available_rounded, label: "Events", routeName: "/events"),
+        ),
+        Expanded(
+          child: CategoryItem(icon: Icons.volunteer_activism_rounded, label: "Volunteer", routeName: "/volunteer"),
+        ),
+        Expanded(
+          child: CategoryItem(icon: Icons.work_rounded, label: "Opportunities", routeName: "/opportunities"),
+        ),
+      ],
+    ),
+  ),
+),
 
               const Divider(thickness: 1, height: 30),
 

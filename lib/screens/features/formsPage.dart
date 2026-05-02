@@ -94,7 +94,6 @@ class _FormsPageState extends State<FormsPage> {
         'category': widget.data['Type'] == 'job' ? 'Jobs' : 'Internships',
         'organization': widget.data['Company'] ?? 'Unknown',
 
-        // 🔥 new form data
         'cvLink': _cvController.text,
         'motivation': _motivationController.text,
         'skills': selectedSkills,

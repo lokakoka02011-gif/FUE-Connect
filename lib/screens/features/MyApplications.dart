@@ -1,5 +1,26 @@
 import 'package:flutter/material.dart';
 
+void main() {
+  runApp(const FUEConnectApp());
+}
+
+class FUEConnectApp extends StatelessWidget {
+  const FUEConnectApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'FUE Connect',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+      ),
+      home: const MyApplicationsPage(),
+    );
+  }
+}
+
 class MyApplicationsPage extends StatefulWidget {
   const MyApplicationsPage({super.key});
 
@@ -20,7 +41,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     "Volunteer"
   ];
 
-  // 🔥 Improved dummy data with IDs + DateTime
+  // Application Data
   List<Map<String, dynamic>> applications = [
     {
       "id": "1",
@@ -60,9 +81,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   // ---------------- FILTER ----------------
   List<Map<String, dynamic>> getFilteredApps(String category) {
     if (category == "All") return applications;
-    return applications
-        .where((app) => app["category"] == category)
-        .toList();
+    return applications.where((app) => app["category"] == category).toList();
   }
 
   // ---------------- STATUS COLOR ----------------
@@ -79,30 +98,34 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     }
   }
 
-  // ---------------- WITHDRAW ----------------
-  void withdrawApplication(String id) {
-    setState(() {
-      applications.removeWhere((app) => app["id"] == id);
-    });
-  }
-
-  // ---------------- DETAILS ----------------
+  // ---------------- DETAILS DIALOG ----------------
   void openDetails(Map<String, dynamic> app) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(app["title"]),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Organization: ${app["organization"]}"),
-              Text("Date: ${_formatDate(app["date"])}"),
-              Text("Status: ${app["status"]}"),
-              const SizedBox(height: 10),
-              Text(app["details"]),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Organization: ${app["organization"]}",
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text("Date: ${_formatDate(app["date"])}"),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text("Status: "),
+                Text(app["status"],
+                    style: TextStyle(
+                        color: getStatusColor(app["status"]),
+                        fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const Divider(height: 24),
+            Text(app["details"]),
+          ],
         ),
         actions: [
           TextButton(
@@ -115,18 +138,22 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
   }
 
   String _formatDate(DateTime date) {
-    return "${date.year}-${date.month}-${date.day}";
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
-  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("My Applications"),
+        title: const Text("My Applications",
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           tabs: categories.map((c) => Tab(text: c)).toList(),
         ),
       ),
@@ -137,52 +164,87 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
 
           if (filteredApps.isEmpty) {
             return const Center(
-              child: Text("No applications found"),
+              child: Text("No applications found",
+                  style: TextStyle(color: Colors.grey, fontSize: 16)),
             );
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             itemCount: filteredApps.length,
             itemBuilder: (context, index) {
               final app = filteredApps[index];
 
               return Card(
-                margin: const EdgeInsets.all(10),
-                child: ListTile(
+                elevation: 0.5,
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
                   onTap: () => openDetails(app),
-                  title: Text(
-                    app["title"],
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                          "${app["organization"]} • ${_formatDate(app["date"])}"),
-                      const SizedBox(height: 6),
-
-                      // 🔥 STATUS CHIP
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: getStatusColor(app["status"])
-                              .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                app["title"],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 17,
+                                ),
+                              ),
+                            ),
+                            // Clean Status Label
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: getStatusColor(app["status"])
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                app["status"].toUpperCase(),
+                                style: TextStyle(
+                                  color: getStatusColor(app["status"]),
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        child: Text(
-                          app["status"],
+                        const SizedBox(height: 6),
+                        Text(
+                          app["organization"],
                           style: TextStyle(
-                            color: getStatusColor(app["status"]),
-                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.blueGrey[600],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.cancel, color: Colors.red),
-                    onPressed: () => withdrawApplication(app["id"]),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_month_outlined,
+                                size: 14, color: Colors.grey[600]),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatDate(app["date"]),
+                              style: TextStyle(
+                                  color: Colors.grey[600], fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
