@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:html' as html;
+import 'package:flutter/foundation.dart';
 
 class FormsPage extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -18,8 +20,9 @@ class _FormsPageState extends State<FormsPage> {
   final TextEditingController _motivationController = TextEditingController();
 
   bool _isSubmitting = false;
+  bool get isClubForm => widget.data['type'] == 'club';
 
-  // 🔥 NEW: skills system
+  // skill selector 
   List<String> selectedSkills = [];
   List<String> allSkills = [];
 
@@ -29,6 +32,7 @@ class _FormsPageState extends State<FormsPage> {
     _loadSkills();
   }
 
+// load available skills men Firestore to add to list
   Future<void> _loadSkills() async {
     final snapshot = await FirebaseFirestore.instance.collection('skills').get();
     setState(() {
@@ -42,44 +46,51 @@ class _FormsPageState extends State<FormsPage> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Select Skills"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView(
-              children: allSkills.map((skill) {
-                return CheckboxListTile(
-                  title: Text(skill),
-                  value: tempSelected.contains(skill),
-                  onChanged: (value) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text("Select Skills"),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  children: allSkills.map((skill) {
+                    return CheckboxListTile(
+                      title: Text(skill),
+                      value: tempSelected.contains(skill),
+                      onChanged: (value) {
+                        setStateDialog(() {
+                          if (value == true) {
+                            if (!tempSelected.contains(skill)) {
+                              tempSelected.add(skill);
+                            }
+                          } else {
+                            tempSelected.remove(skill);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
                     setState(() {
-                      if (value == true) {
-                        tempSelected.add(skill);
-                      } else {
-                        tempSelected.remove(skill);
-                      }
+                      selectedSkills = tempSelected.toSet().toList();
                     });
+                    Navigator.pop(context);
                   },
-                );
-              }).toList(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  selectedSkills = tempSelected;
-                });
-                Navigator.pop(context);
-              },
-              child: const Text("Done"),
-            )
-          ],
+                  child: const Text("Done"),
+                )
+              ],
+            );
+          },
         );
       },
     );
   }
 
+// submit application to Firestore with selected skills w user data
   Future<void> _submitApplication() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -88,25 +99,37 @@ class _FormsPageState extends State<FormsPage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
 
-      await FirebaseFirestore.instance.collection('Application').add({
-        'userId': user!.uid,
+      if (user == null) return;
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final userName = userDoc.data()?['name'] ?? '';
+      final studentId = userDoc.data()?['studentId'] ?? '';
+      final email = user.email ?? '';
+
+      await FirebaseFirestore.instance.collection('applications').add({
+        'userId': user.uid,
+        'userName': userName,
+        'studentId': studentId,
+        'email': email,
+        'opportunityId': widget.data['id'] ?? '',
         'title': widget.data['Title'] ?? '',
-        'category': widget.data['Type'] == 'job' ? 'Jobs' : 'Internships',
         'organization': widget.data['Company'] ?? 'Unknown',
-
-        'cvLink': _cvController.text,
+        'cvUrl': _cvController.text,
         'motivation': _motivationController.text,
-        'skills': selectedSkills,
-
-        'status': 'Pending',
-        'date': DateTime.now().toString(),
+        'skills': selectedSkills.toSet().toList(),
+        'status': 'pending',
+        'submissionDate': FieldValue.serverTimestamp(),
       });
 
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Application submitted successfully ✅"),
+            content: Text("Application submitted successfully"),
             backgroundColor: Colors.green,
           ),
         );
@@ -124,6 +147,24 @@ class _FormsPageState extends State<FormsPage> {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
+
+  Future<void> _pickFile() async {
+  if (kIsWeb) {
+    final uploadInput = html.FileUploadInputElement();
+    uploadInput.accept = '.pdf,.doc,.docx';
+    uploadInput.click();
+
+    uploadInput.onChange.listen((event) {
+      final file = uploadInput.files?.first;
+
+      if (file != null) {    
+      setState(() {
+          _cvController.text = "CV Uploaded";
+        });
+      }
+    });
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -148,19 +189,33 @@ class _FormsPageState extends State<FormsPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
+              if (!isClubForm)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _pickFile,
+                    icon: const Icon(Icons.upload_file),
+                    label: Text(
+                      _cvController.text.isEmpty
+                          ? "Upload CV"
+                          : _cvController.text,
+                    ),
+                  ),
+                ),
+              
+                const SizedBox(height: 15),
 
-                _buildTextField(_cvController, "CV Link (Google Drive)", Icons.link),
                 _buildTextField(_motivationController, "Why are you applying?", Icons.edit, maxLines: 4),
 
                 const SizedBox(height: 15),
 
-                // 🔥 SKILLS SELECTOR
                 Align(
                   alignment: Alignment.centerLeft,
                   child: const Text("Skills", style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 8),
 
+              // show selected skills
                 GestureDetector(
                   onTap: _openSkillSelector,
                   child: Container(

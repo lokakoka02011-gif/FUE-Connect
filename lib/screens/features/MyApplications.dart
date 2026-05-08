@@ -41,7 +41,6 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     "Volunteer"
   ];
 
-  // Application Data
   List<Map<String, dynamic>> applications = [
     {
       "id": "1",
@@ -78,13 +77,13 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     _tabController = TabController(length: categories.length, vsync: this);
   }
 
-  // ---------------- FILTER ----------------
+// filter applications by selected category (All returns everything)
   List<Map<String, dynamic>> getFilteredApps(String category) {
     if (category == "All") return applications;
     return applications.where((app) => app["category"] == category).toList();
   }
 
-  // ---------------- STATUS COLOR ----------------
+// map application status returns UI color
   Color getStatusColor(String status) {
     switch (status) {
       case "Accepted":
@@ -98,7 +97,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     }
   }
 
-  // ---------------- DETAILS DIALOG ----------------
+// show full application details in dialog
   void openDetails(Map<String, dynamic> app) {
     showDialog(
       context: context,
@@ -137,6 +136,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
     );
   }
 
+// format date to readable string 
   String _formatDate(DateTime date) {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
@@ -149,6 +149,7 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
         title: const Text("My Applications",
             style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
+            // tabs to switch between application categories
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -202,7 +203,6 @@ class _MyApplicationsPageState extends State<MyApplicationsPage>
                                 ),
                               ),
                             ),
-                            // Clean Status Label
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),

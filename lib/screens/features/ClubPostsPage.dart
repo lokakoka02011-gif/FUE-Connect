@@ -21,12 +21,13 @@ class ClubPostsPage extends StatelessWidget {
         backgroundColor: fueRed,
         foregroundColor: Colors.white,
       ),
-
+    // load club posts from Firestore in real-time 
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('Clubs')
             .doc(clubId)
             .collection('posts')
+            // sort posts by newest first
             .orderBy('createdAt', descending: true)
             .snapshots(),
 
@@ -48,6 +49,7 @@ class ClubPostsPage extends StatelessWidget {
           return ListView.builder(
             itemCount: posts.length,
             itemBuilder: (context, index) {
+              // get post data as map
               final data = posts[index].data() as Map<String, dynamic>;
 
               return Card(

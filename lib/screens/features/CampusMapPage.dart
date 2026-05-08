@@ -10,12 +10,14 @@ class CampusMapPage extends StatelessWidget {
       body: Container(
         color: Colors.grey[100],
         child: Center(
+          //interactive map b zoom w pan so student can interact
           child: InteractiveViewer(
             panEnabled: true, 
             minScale: 0.5,
             maxScale: 4.0,
             child: Image.asset(
-              'assets/images/campus_map.png', // Ensure this exists in your assets folder
+              'assets/images/campus_map.png',
+              //fallback UI law el image msh mawgoda 
               errorBuilder: (context, error, stackTrace) => const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

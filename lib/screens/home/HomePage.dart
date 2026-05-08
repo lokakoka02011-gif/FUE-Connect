@@ -58,7 +58,7 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- FULL WIDTH AUTOMATIC SLIDESHOW ---
+              // full width automatic slideshow b timer
               Stack(
                 alignment: Alignment.center,
                 children: [
@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 20),
 
-              // --- CATEGORIES ---
+              // categories
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: Text("Categories", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -101,7 +101,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 10),
 SizedBox(
   height: 100,
-  width: double.infinity, // Ensures it takes full device width
+  width: double.infinity, 
   child: Padding(
     padding: const EdgeInsets.symmetric(horizontal: 8),
     child: Row(
@@ -126,7 +126,7 @@ SizedBox(
 
               const Divider(thickness: 1, height: 30),
 
-              // --- POSTS SECTION (FIREBASE) ---
+              // latest posts mn firebase
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: Text("Latest Posts", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -165,7 +165,7 @@ SizedBox(
     );
   }
 
-  // Same helper methods as before...
+// functions lel post cards  
   Widget _buildPostCard(Map<String, dynamic> post, String clubId) {
     String timeDisplay = "Recently";
     if (post["createdAt"] != null) {
@@ -222,6 +222,7 @@ SizedBox(
     );
   }
 
+// arrows bta3et el slideshow
   Widget _buildNavArrow(IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
@@ -232,6 +233,7 @@ SizedBox(
       ),
     );
   }
+  // open details popup lel post
   void _openPostDetails(Map<String, dynamic> post, String clubId) {
     showModalBottomSheet(
       context: context,
@@ -268,7 +270,7 @@ SizedBox(
   }
 }
 
-// CategoryItem class stays the same as previous...
+// Category item widget
 class CategoryItem extends StatelessWidget {
   final IconData icon;
   final String label;

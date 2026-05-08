@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-// Import your main.dart to access UniversalConnectCard and CategoryPill
 import 'package:fue_connect/main.dart'; 
+import 'package:fue_connect/widgets/filter_pills.dart';
+import 'package:fue_connect/widgets/loading_indicator.dart';
+import 'package:fue_connect/screens/features/formsPage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class OpportunitiesPage extends StatefulWidget {
   const OpportunitiesPage({super.key});
@@ -12,11 +15,12 @@ class OpportunitiesPage extends StatefulWidget {
 }
 
 class _OpportunitiesPageState extends State<OpportunitiesPage> {
+  // store saved opportunities locally 
   final Set<String> _savedOpportunityIds = {};
   String _selectedCategory = "All";
+  String _searchQuery = "";
   
-  // Example categories - adjust based on your Firestore fields
-  final List<String> _categories = ['All', 'Tech', 'Business', 'Design', 'Engineering'];
+  final List<String> _categories = ['All', 'Dentistry', 'Business', 'Tech', 'Engineering'];
 
   @override
   Widget build(BuildContext context) {
@@ -43,26 +47,43 @@ class _OpportunitiesPageState extends State<OpportunitiesPage> {
         ),
         body: Column(
           children: [
-            // 1. CATEGORY PILLS (Placed below the TabBar)
-            const SizedBox(height: 15),
-            SizedBox(
-              height: 45,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _categories.length,
-                itemBuilder: (context, index) {
-                  return CategoryPill(
-                    label: _categories[index],
-                    isSelected: _selectedCategory == _categories[index],
-                    onTap: () => setState(() => _selectedCategory = _categories[index]),
-                  );
+
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                onChanged: (value) =>
+                    setState(() => _searchQuery = value.toLowerCase()),
+                decoration: InputDecoration(
+                  hintText: 'Search opportunities...',
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Color(0xffb1170c),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: FilterPills(
+                options: _categories,
+                selected: _selectedCategory,
+                onSelected: (value) {
+                  setState(() {
+                    _selectedCategory = value;
+                  });
                 },
               ),
             ),
-            const SizedBox(height: 5),
 
-            // 2. TAB CONTENT
+            const SizedBox(height: 5),
+            // tab content
             Expanded(
               child: TabBarView(
                 children: [
@@ -72,26 +93,38 @@ class _OpportunitiesPageState extends State<OpportunitiesPage> {
               ),
             ),
           ],
-        ),
+        )
       ),
     );
   }
 
   Widget _buildOpportunityList(String filterType) {
+    // listen lel opportunities mn Firestore real time
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('Opportunity').snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasError) return const Center(child: Text("Error loading data"));
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xffb1170c)));
+        if (snapshot.hasError) {
+          return const Center(
+            child: Text("Error loading opportunities"),
+          );
         }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: LoadingIndicator(),
+          );
+        }
+
 
         final docs = snapshot.data!.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
+          final title =
+              (data['Title'] ?? "").toString().toLowerCase();          
           final typeMatch = data['Type']?.toString().toLowerCase() == filterType;
           final categoryMatch = _selectedCategory == "All" || 
                                (data['Category']?.toString() == _selectedCategory);
-          return typeMatch && categoryMatch;
+          return typeMatch && 
+          categoryMatch &&
+          title.contains(_searchQuery);
         }).toList();
 
         if (docs.isEmpty) {
@@ -114,19 +147,21 @@ class _OpportunitiesPageState extends State<OpportunitiesPage> {
           itemBuilder: (context, index) {
             final docId = docs[index].id;
             final data = docs[index].data() as Map<String, dynamic>;
+            // check law el opportunity saved abl keda
             bool isSaved = _savedOpportunityIds.contains(docId);
 
             return UniversalConnectCard(
               title: data['Title'] ?? 'Untitled',
               subtitle: data['Description'] ?? '',
-              // Using a default job/internship icon if no image exists
+              // fallback image law mafesh image fel data
               imageUrl: data['imageUrl'], 
               trailing: IconButton(
                 icon: Icon(
                   isSaved ? Icons.bookmark : Icons.bookmark_border,
                   color: isSaved ? const Color(0xffb1170c) : Colors.grey,
                 ),
-                onPressed: () => _toggleSaveOpportunity(docId),
+                // toggle save/unsave lel opportunity
+                onPressed: () => _toggleSaveOpportunity(docId, data),
               ),
               infoRows: [
                 Row(
@@ -165,48 +200,53 @@ class _OpportunitiesPageState extends State<OpportunitiesPage> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
-            const SizedBox(height: 20),
-            Text(data['Title'] ?? 'Opportunity', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 15),
-            _detailRow(Icons.payments, "Salary: ", "${data['Pay'] ?? 'N/A'} EGP"),
-            if (showGPA) _detailRow(Icons.grade, "Min. GPA: ", gpaValue),
-            _detailRow(Icons.calendar_today, "Deadline: ", _formatTimestamp(data['Deadline'])),
-            const Divider(height: 30),
-            const Text("Description", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 8),
-            Text(data['Description'] ?? 'No description provided.', style: TextStyle(color: Colors.grey[800], height: 1.4)),
-            const SizedBox(height: 20),
-            const Text("Requirements", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 8),
-            Text(data['Requirments'] ?? 'Standard eligibility.', style: TextStyle(color: Colors.grey[800], height: 1.4)),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xffb1170c),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context, 
-                    '/forms',
-                    arguments: data,
+        child: SingleChildScrollView(  
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
+              const SizedBox(height: 20),
+              Text(data['Title'] ?? 'Opportunity', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 15),
+              _detailRow(Icons.payments, "Salary: ", "${data['Pay'] ?? 'N/A'} EGP"),
+              if (showGPA) _detailRow(Icons.grade, "Min. GPA: ", gpaValue),
+              _detailRow(Icons.calendar_today, "Deadline: ", _formatTimestamp(data['Deadline'])),
+              const Divider(height: 30),
+              const Text("Description", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              Text(data['Description'] ?? 'No description provided.', style: TextStyle(color: Colors.grey[800], height: 1.4)),
+              const SizedBox(height: 20),
+              const Text("Requirements", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              Text(data['Requirments'] ?? 'Standard eligibility.', style: TextStyle(color: Colors.grey[800], height: 1.4)),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xffb1170c),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+
+                    Navigator.push(
+                      context, 
+                      MaterialPageRoute(
+                        builder: (_) => FormsPage(data: data)
+                      ),
                     );
-                },
-                child: const Text("Apply Now", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  },
+                  child: const Text("Apply Now", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-          ],
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
-      ),
+      )  
     );
   }
 
@@ -224,15 +264,42 @@ class _OpportunitiesPageState extends State<OpportunitiesPage> {
     );
   }
 
-  void _toggleSaveOpportunity(String docId) {
-    setState(() {
-      if (_savedOpportunityIds.contains(docId)) {
-        _savedOpportunityIds.remove(docId);
-      } else {
-        _savedOpportunityIds.add(docId);
+      Future<void> _toggleSaveOpportunity(
+        String docId,
+        Map<String, dynamic> data,
+      ) async {
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+
+        if (uid == null) return;
+
+        final savedRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('saved_items')
+            .doc(docId);
+
+        final doc = await savedRef.get();
+
+        if (doc.exists) {
+          await savedRef.delete();
+
+          setState(() {
+            _savedOpportunityIds.remove(docId);
+          });
+        } else {
+          await savedRef.set({
+            'title': data['Title'],
+            'type': data['Type'],
+            'imageUrl': data['imageUrl'],
+            'route': '/opportunities',
+            'savedAt': Timestamp.now(),
+          });
+
+          setState(() {
+            _savedOpportunityIds.add(docId);
+          });
+        }
       }
-    });
-  }
 
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return 'N/A';

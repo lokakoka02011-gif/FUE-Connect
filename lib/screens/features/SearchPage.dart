@@ -23,7 +23,7 @@ class _SearchPageState extends State<SearchPage> {
     _loadRecentlyViewed();
   }
 
-  // --- PERSISTENCE LOGIC ---
+// save & load recently viewed items 
   Future<void> _loadRecentlyViewed() async {
     final prefs = await SharedPreferences.getInstance();
     final String? recentData = prefs.getString('recent_searches');
@@ -33,7 +33,7 @@ class _SearchPageState extends State<SearchPage> {
       });
     }
   }
-
+// add item lel recently viewed
   Future<void> _addToRecent(Map<String, dynamic> item) async {
     final prefs = await SharedPreferences.getInstance();
     
@@ -44,14 +44,14 @@ class _SearchPageState extends State<SearchPage> {
     
     _recentlyViewed.insert(0, item);
     
-    // Keep list manageable (last 5 items)
+    // keep list akher 5 items only for manageablity 
     if (_recentlyViewed.length > 5) _recentlyViewed.removeLast();
 
     await prefs.setString('recent_searches', json.encode(_recentlyViewed));
     setState(() {});
   }
 
-  // --- SEARCH LOGIC (FIXED) ---
+  // search fel clubs w events w opportunities
   void _performSearch(String query) async {
     if (query.trim().isEmpty) {
       setState(() {
@@ -69,8 +69,7 @@ class _SearchPageState extends State<SearchPage> {
     List<Map<String, dynamic>> tempResults = [];
 
     try {
-      // Fetching collections and filtering locally to fix the "first letter" issue
-      // 1. Search Clubs
+      // Search clubs
       var clubSnap = await FirebaseFirestore.instance.collection('Clubs').get();
       for (var doc in clubSnap.docs) {
         var data = doc.data();
@@ -82,7 +81,7 @@ class _SearchPageState extends State<SearchPage> {
         }
       }
 
-      // 2. Search Events
+      // Search events
       var eventSnap = await FirebaseFirestore.instance.collection('Events').get();
       for (var doc in eventSnap.docs) {
         var data = doc.data();
@@ -94,7 +93,7 @@ class _SearchPageState extends State<SearchPage> {
         }
       }
 
-      // 3. Search Opportunities
+      // Search Opportunities
       var oppSnap = await FirebaseFirestore.instance.collection('Opportunity').get();
       for (var doc in oppSnap.docs) {
         var data = doc.data();
@@ -158,7 +157,6 @@ class _SearchPageState extends State<SearchPage> {
             ),
           ),
 
-          // Dynamic Body
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: fueRed))
@@ -177,14 +175,12 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  // --- SUB-WIDGETS ---
-
   Widget _buildEmptyState() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Recently Viewed
+          // Recently viewed items
           if (_recentlyViewed.isNotEmpty) ...[
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 20, 16, 10),

@@ -14,6 +14,7 @@ class _ChatPageState extends State<ChatPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+// send message to Firestore + attach user info + timestamp
   void _sendMessage() async {
     if (_messageController.text.trim().isNotEmpty) {
       await _firestore.collection('support_chats').add({
@@ -31,13 +32,13 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("FUE Live Support"),
-        backgroundColor: const Color(0xffb1170c), // FUE Red
+        backgroundColor: const Color(0xffb1170c), 
         foregroundColor: Colors.white,
       ),
       body: Column(
         children: [
-          // Message List
           Expanded(
+            // listen to chat messages in real-time (latest first)
             child: StreamBuilder<QuerySnapshot>(
               stream: _firestore
                   .collection('support_chats')
@@ -51,11 +52,12 @@ class _ChatPageState extends State<ChatPage> {
                 final docs = snapshot.data!.docs;
 
                 return ListView.builder(
-                  reverse: true, // Newest messages at the bottom
+                  reverse: true,
                   padding: const EdgeInsets.all(15),
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     final data = docs[index].data() as Map<String, dynamic>;
+                    // check if message is sent by current user
                     bool isMe = data['senderId'] == _auth.currentUser?.uid;
 
                     return _buildMessageBubble(
@@ -68,7 +70,6 @@ class _ChatPageState extends State<ChatPage> {
             ),
           ),
 
-          // Input Field
           _buildMessageInput(),
         ],
       ),
@@ -101,6 +102,7 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+// message input field + send button
   Widget _buildMessageInput() {
     return Container(
       padding: const EdgeInsets.all(10),

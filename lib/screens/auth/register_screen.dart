@@ -24,11 +24,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  String _capitalize(String value) {
-    if (value.isEmpty) return value;
-    return value[0].toUpperCase() + value.substring(1);
-  }
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -54,11 +49,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final String input = _emailController.text.trim();
     final String fullEmail = "$input@fue.edu.eg";
 
+// check if input is 8 arkam is student, otherwise admin
     final bool isStudent = RegExp(r'^\d{8}$').hasMatch(input);
     final String userRole = isStudent ? "student" : "admin";
 
     try {
-      // 1. Firebase Auth Registration
+      // create user in firebase auth
       await _authService.registerWithEmail(
         email: fullEmail,
         password: _passwordController.text,
@@ -70,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       User? user = FirebaseAuth.instance.currentUser;
 
       if (user != null) {
-        // 2. Firestore Document Logic (Using ID as Doc Name for students)
+        // use ID as doc id for students, otherwise admin_<uid>
         String docId = isStudent ? input : "admin_${user.uid}";
 
         await FirebaseFirestore.instance
@@ -82,10 +78,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'lastName': _lastNameController.text.trim(),
           'role': userRole,
           'uid': user.uid,
+          if (isStudent) 'id': input,
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        // 3. Send Verification
+        // send email verification
         if (!user.emailVerified) {
           await user.sendEmailVerification();
         }
@@ -96,7 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } on FirebaseAuthException catch (e) {
       String message = "Registration failed.";
       
-      // ✅ Specific checks for the Firebase Console Password Rules
+      // handles common firebase auth errors
       if (e.code == 'weak-password') {
         message = "Password is too weak. Ensure it meets all safety requirements.";
       } else if (e.code == 'email-already-in-use') {
@@ -131,8 +128,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Go back to Login
+              Navigator.pop(context);
+              Navigator.pop(context); 
             },
             child: const Text("OK"),
           ),
@@ -158,8 +155,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _firstNameController,
                   decoration: const InputDecoration(labelText: "First Name", border: OutlineInputBorder()),
-                  validator: (v) => v!.isEmpty ? "Required" : null,
-                ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) {
+                      return "Enter your university ID";
+                    }
+
+                    if (!RegExp(r'^\d{8}$').hasMatch(v)) {
+                      return "ID must be 8 digits";
+                    }
+
+                    return null;
+                  }, ),
                 const SizedBox(height: 16),
 
                 TextFormField(
@@ -195,7 +201,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   validator: (v) {
                     if (v == null || v.length < 8) return "Must be 8+ characters";
-                    // ✅ Matches strict Firebase Console rules
                     if (!RegExp(r'^(?=.*?[A-Z])(?=.*?[0-9])(?=.*?[!@#\$&*~])').hasMatch(v)) {
                       return "Need uppercase, number, and symbol";
                     }

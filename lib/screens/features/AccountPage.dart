@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fue_connect/screens/features/MyApplications.dart';
+import 'package:fue_connect/widgets/loading_indicator.dart';
+import 'package:fue_connect/screens/auth/login_screen.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -17,33 +19,45 @@ class _AccountPageState extends State<AccountPage> {
   late Future<Map<String, dynamic>> _profileFuture;
 
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _skillsController = TextEditingController();
   final TextEditingController _interestsController = TextEditingController();
+
+  Set<String> _selectedSkills = {};
+
+  final List<String> allSkills = [
+    "Flutter",
+    "Firebase",
+    "UI/UX",
+    "Marketing",
+    "Design",
+    "Data Analysis",
+  ];
 
   final String studentsCollection = "students";
   final String skillsCollection = "student_skills";
   final String interestsCollection = "student_interests";
 
   String _oldDesc = "";
-  String _oldSkills = "";
+  Set<String> _oldSkills = {};
   String _oldInterests = "";
 
   @override
   void initState() {
     super.initState();
     _profileFuture = _fetchFullProfile();
-    _checkFirstTimeUser();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkFirstTimeUser();
+    });
   }
 
   @override
   void dispose() {
     _descriptionController.dispose();
-    _skillsController.dispose();
     _interestsController.dispose();
     super.dispose();
   }
 
-  // ---------------- FETCH PROFILE ----------------
+// fetch profile data w load skills/interests from Firestore
   Future<Map<String, dynamic>> _fetchFullProfile() async {
     if (uid == null) return {};
 
@@ -62,10 +76,13 @@ class _AccountPageState extends State<AccountPage> {
 
     if (!isEditing) {
       _descriptionController.text = studentData['description'] ?? "";
-      _skillsController.text =
-          (skillDoc.data() as Map?)?['skills'] ?? "";
       _interestsController.text =
           (interestDoc.data() as Map?)?['interests'] ?? "";
+
+      final skillsData = (skillDoc.data() as Map?)?['skills'];
+      if (skillsData is List) {
+        _selectedSkills = Set<String>.from(skillsData);
+      }
     }
 
     return {
@@ -73,7 +90,7 @@ class _AccountPageState extends State<AccountPage> {
     };
   }
 
-  // ---------------- FIRST TIME CHECK ----------------
+// first time user yemla personal info
   Future<void> _checkFirstTimeUser() async {
     if (uid == null) return;
 
@@ -92,7 +109,6 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
-  // ---------------- FIRST TIME POPUP ----------------
   void _showFirstTimeDialog() {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -132,39 +148,38 @@ class _AccountPageState extends State<AccountPage> {
               ],
             ),
           ),
-        actions: [
-  ElevatedButton(
-    onPressed: () async {
-      await FirebaseFirestore.instance
-          .collection(studentsCollection)
-          .doc(uid)
-          .set({
-        "first_name": nameController.text.split(" ").first,
-        "last_name": nameController.text.split(" ").length > 1
-            ? nameController.text.split(" ").sublist(1).join(" ")
-            : "",
-        "email": emailController.text,
-        "faculty": facultyController.text,
-        "major": majorController.text,
-        "isProfileComplete": true,
-      }, SetOptions(merge: true));
+          actions: [
+            ElevatedButton(
+              onPressed: () async {
+                await FirebaseFirestore.instance
+                    .collection(studentsCollection)
+                    .doc(uid)
+                    .set({
+                  "first_name": nameController.text.split(" ").first,
+                  "last_name": nameController.text.split(" ").length > 1
+                      ? nameController.text.split(" ").sublist(1).join(" ")
+                      : "",
+                  "email": emailController.text,
+                  "faculty": facultyController.text,
+                  "major": majorController.text,
+                  "isProfileComplete": true,
+                }, SetOptions(merge: true));
 
-      Navigator.pop(context);
+                Navigator.pop(context);
 
-      setState(() {
-        _profileFuture = _fetchFullProfile();
-      });
-    },
-    child: const Text("Save"),
-  )
-],
-
+                setState(() {
+                  _profileFuture = _fetchFullProfile();
+                });
+              },
+              child: const Text("Save"),
+            )
+          ],
         );
       },
     );
   }
 
-  // ---------------- SAVE PROFILE ----------------
+// save updated profile + convert selected skills to list for Firestore
   void _saveData() async {
     if (uid == null) return;
 
@@ -179,7 +194,7 @@ class _AccountPageState extends State<AccountPage> {
         .collection(skillsCollection)
         .doc(uid)
         .set({
-      "skills": _skillsController.text,
+      "skills": _selectedSkills.toList(),
     }, SetOptions(merge: true));
 
     await FirebaseFirestore.instance
@@ -199,20 +214,23 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>>(
       future: _profileFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting && !isEditing) {
-          return const Center(
-            child: CircularProgressIndicator(color: Color(0xffb1170c)),
+          return const Scaffold(
+            body: Center(
+              child: LoadingIndicator(),
+            ),
           );
         }
 
         if (!snapshot.hasData || snapshot.data!["info"] == null) {
-          return const Center(child: Text("No profile found"));
+          return const Scaffold(
+            body: Center(child: Text("No profile found")),
+          );
         }
 
         final info = snapshot.data!["info"];
@@ -238,34 +256,60 @@ class _AccountPageState extends State<AccountPage> {
 
                 const SizedBox(height: 20),
 
-                _buildAcademic(info),
-
-                const SizedBox(height: 20),
-
                 _buildButtons(),
-
-                const SizedBox(height: 10),
-
-                // 🔥 NEW BUTTON
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MyApplicationsPage(),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.logout),
+                      label: const Text("Log Out"),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.assignment),
-                  label: const Text("My Applications"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueGrey,
-                    foregroundColor: Colors.white,
+                      onPressed: () async {
+                        final shouldLogout = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text("Log Out"),
+                            content: const Text(
+                              "Are you sure you want to log out?",
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(context, false),
+                                child: const Text("Cancel"),
+                              ),
+                              ElevatedButton(
+                                onPressed: () =>
+                                    Navigator.pop(context, true),
+                                child: const Text("Log Out"),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (shouldLogout == true) {
+                          await FirebaseAuth.instance.signOut();
+                          if (context.mounted) {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginScreen(),
+                              ),
+                              (route) => false,
+                            );
+                          }
+                        }
+                      },
+                    ),
                   ),
-                ),
 
-                const Divider(height: 40),
-
+                  const Divider(height: 40),
                 _buildFields(),
               ],
             ),
@@ -275,24 +319,18 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  // ---------------- BUTTONS ----------------
   Widget _buildButtons() {
     if (!isEditing) {
-      return ElevatedButton.icon(
+      return ElevatedButton(
         onPressed: () {
           setState(() {
             _oldDesc = _descriptionController.text;
-            _oldSkills = _skillsController.text;
+            _oldSkills = Set.from(_selectedSkills);
             _oldInterests = _interestsController.text;
             isEditing = true;
           });
         },
-        icon: const Icon(Icons.edit),
-        label: const Text("Edit Profile"),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xffb1170c),
-          foregroundColor: Colors.white,
-        ),
+        child: const Text("Edit Profile"),
       );
     }
 
@@ -303,7 +341,7 @@ class _AccountPageState extends State<AccountPage> {
           onPressed: () {
             setState(() {
               _descriptionController.text = _oldDesc;
-              _skillsController.text = _oldSkills;
+              _selectedSkills = _oldSkills;
               _interestsController.text = _oldInterests;
               isEditing = false;
             });
@@ -319,28 +357,6 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  // ---------------- ACADEMIC ----------------
-  Widget _buildAcademic(Map info) {
-    return Column(
-      children: [
-        _row("Faculty", info['faculty']),
-        _row("Major", info['major']),
-        _row("GPA", info['gpa']),
-      ],
-    );
-  }
-
-  Widget _row(String label, String? value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label),
-        Text(value ?? "N/A"),
-      ],
-    );
-  }
-
-  // ---------------- FIELDS ----------------
   Widget _buildFields() {
     return Column(
       children: [
@@ -349,11 +365,48 @@ class _AccountPageState extends State<AccountPage> {
           enabled: isEditing,
           decoration: const InputDecoration(labelText: "Description"),
         ),
-        TextField(
-          controller: _skillsController,
-          enabled: isEditing,
-          decoration: const InputDecoration(labelText: "Skills"),
+
+        const SizedBox(height: 10),
+        
+      // selectable skills (tap to add/remove, prevents duplicates, shows selection)
+        Wrap(
+          spacing: 8,
+          children: allSkills.map((skill) {
+            final isSelected = _selectedSkills.contains(skill);
+
+            return GestureDetector(
+              onTap: () {
+                if (!isEditing) return;
+
+                setState(() {
+                  if (isSelected) {
+                    _selectedSkills.remove(skill);
+                  } else {
+                    _selectedSkills.add(skill);
+                  }
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xffb1170c)
+                      : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  skill,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.black,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
+
+        const SizedBox(height: 10),
+
         TextField(
           controller: _interestsController,
           enabled: isEditing,

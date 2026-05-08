@@ -1,18 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fue_connect/widgets/loading_indicator.dart';
 
 class AboutUsPage extends StatelessWidget {
   const AboutUsPage({super.key});
 
-  // Function to launch external URLs (LinkedIn/CV)
-  Future<void> _launchURL(String url) async {
-    if (url.isEmpty) return;
-    final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      debugPrint("Could not launch $url");
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +19,6 @@ class AboutUsPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. Header Section
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
@@ -53,7 +44,6 @@ class AboutUsPage extends StatelessWidget {
               ),
             ),
 
-            // 2. Mission Section
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -72,7 +62,6 @@ class AboutUsPage extends StatelessWidget {
 
             const Divider(height: 10, indent: 30, endIndent: 30),
 
-            // 3. Dynamic Team Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20),
               child: Column(
@@ -82,8 +71,8 @@ class AboutUsPage extends StatelessWidget {
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: fueRed)),
                   const SizedBox(height: 16),
                   
+                  // load team members men Firestore
                   StreamBuilder<QuerySnapshot>(
-                    // Query Firestore where isTeamMember field is true
                     stream: FirebaseFirestore.instance
                         .collection('users')
                         .where('isTeamMember', isEqualTo: true)
@@ -91,10 +80,19 @@ class AboutUsPage extends StatelessWidget {
                     builder: (context, snapshot) {
                       if (snapshot.hasError) return const Text("Error loading team.");
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const LoadingIndicator();
                       }
 
                       final teamDocs = snapshot.data!.docs;
+                      teamDocs.sort((a, b) {
+                        final dataA = a.data() as Map<String, dynamic>;
+                        final dataB = b.data() as Map<String, dynamic>;
+
+                        final nameA = "${dataA['firstName'] ?? ''} ${dataA['lastName'] ?? ''}".toLowerCase();
+                        final nameB = "${dataB['firstName'] ?? ''} ${dataB['lastName'] ?? ''}".toLowerCase();
+
+                        return nameA.compareTo(nameB);
+                      });                      
 
                       if (teamDocs.isEmpty) {
                         return const Text("No team members found in database.");
@@ -108,15 +106,10 @@ class AboutUsPage extends StatelessWidget {
                         itemBuilder: (context, index) {
                           var data = teamDocs[index].data() as Map<String, dynamic>;
                           
-                          // Displaying data using 'teamRole' and 'description'
                           return _buildTeamMember(
                             "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}",
-                            data['teamRole'] ?? "Team Member", // Changed from 'role' to 'teamRole'
+                            data['teamRole'] ?? "Team Member", 
                             description: data['description'] ?? "No bio available.",
-                            linkedin: data['linkedin'] ?? "",
-                            cv: data['cv'] ?? "",
-                            // Highlight if the role contains 'Leader'
-                            isLeader: data['teamRole']?.toString().toLowerCase().contains('leader') ?? false,
                           );
                         },
                       );
@@ -133,33 +126,23 @@ class AboutUsPage extends StatelessWidget {
   }
 
   Widget _buildTeamMember(String name, String role, 
-      {bool isLeader = false, required String description, required String linkedin, required String cv}) {
+      {required String description}) {
     return Card(
-      elevation: isLeader ? 4 : 0.5,
+      elevation: 0.5,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: isLeader ? const BorderSide(color: Color(0xffb1170c), width: 1.5) : BorderSide.none,
+        side: BorderSide.none,
       ),
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: isLeader ? const Color(0xffb1170c) : Colors.grey[300],
-          child: Icon(Icons.person, color: isLeader ? Colors.white : Colors.grey[600]),
+          backgroundColor: Colors.grey[300],
+          child: Icon(Icons.person, color: Colors.grey[600]),
         ),
-        title: Text(name, style: TextStyle(fontWeight: isLeader ? FontWeight.bold : FontWeight.normal)),
+        title: Text(name, style: TextStyle(fontWeight: FontWeight.normal)),
         subtitle: Text(role, style: const TextStyle(fontSize: 12)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (linkedin.isNotEmpty)
-              IconButton(
-                icon: const Icon(Icons.link, color: Colors.blue, size: 20),
-                onPressed: () => _launchURL(linkedin),
-              ),
-            if (cv.isNotEmpty)
-              IconButton(
-                icon: const Icon(Icons.description_outlined, color: Colors.orange, size: 20),
-                onPressed: () => _launchURL(cv),
-              ),
             const Icon(Icons.expand_more),
           ],
         ),

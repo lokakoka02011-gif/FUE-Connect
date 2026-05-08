@@ -2,7 +2,7 @@ class PostModel {
   final String postId;
   final String title;
   final String description;
-  final String uid; // ID of the user who posted
+  final String uid; 
   final DateTime createdAt;
   final List<String> likes;
 
@@ -15,13 +15,13 @@ class PostModel {
     required this.likes,
   });
 
+// converts map (firestore data) l PostModel w handles missing values law fe fields na2sa
   factory PostModel.fromMap(Map<String, dynamic> map) {
     return PostModel(
       postId: map['postId'] ?? '',
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       uid: map['uid'] ?? '',
-      // Handling Firestore Timestamps specifically
       createdAt: (map['createdAt'] != null) 
           ? map['createdAt'].toDate() 
           : DateTime.now(),

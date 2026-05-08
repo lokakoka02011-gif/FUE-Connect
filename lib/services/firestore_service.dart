@@ -5,25 +5,26 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+// get current user id
   String get userId => _auth.currentUser!.uid;
 
-  // ── READ: Get current user's profile ─────────────────
+  // get user profile
   Future<Map<String, dynamic>?> getUserProfile() async {
     final doc = await _db.collection('users').doc(userId).get();
     return doc.exists ? doc.data() : null;
   }
 
-  // ── READ: Stream of user profile (real-time) ─────────
+  // stream user profile (real-time)
   Stream<DocumentSnapshot> getUserProfileStream() {
     return _db.collection('users').doc(userId).snapshots();
   }
 
-  // ── UPDATE: Update user profile ───────────────────────
+  // update user profile
   Future<void> updateUserProfile(Map<String, dynamic> data) async {
     await _db.collection('users').doc(userId).update(data);
   }
 
-  // ── CREATE: Add a new post ────────────────────────────
+  // create new post
   Future<DocumentReference> createPost({
     required String title,
     required String content,
@@ -37,7 +38,7 @@ class FirestoreService {
     });
   }
 
-  // ── READ: Get all posts (real-time stream) ────────────
+  // get posts stream
   Stream<QuerySnapshot> getPostsStream() {
     return _db
         .collection('posts')
@@ -45,14 +46,14 @@ class FirestoreService {
         .snapshots();
   }
 
-  // ── UPDATE: Like a post ───────────────────────────────
+  // like a post 
   Future<void> likePost(String postId) async {
     await _db.collection('posts').doc(postId).update({
       'likes': FieldValue.increment(1),
     });
   }
 
-  // ── DELETE: Delete a post ─────────────────────────────
+  // Delete post 
   Future<void> deletePost(String postId) async {
     await _db.collection('posts').doc(postId).delete();
   }

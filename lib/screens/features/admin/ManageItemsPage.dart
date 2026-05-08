@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Add this
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:fue_connect/screens/features/admin/AddItemsPage.dart';
 
 class ManageItemsPage extends StatefulWidget {
   final String title;
-  final String collectionPath; // Added this
+  final String collectionPath; 
 
   const ManageItemsPage({
     super.key, 
@@ -18,10 +18,10 @@ class ManageItemsPage extends StatefulWidget {
 
 class _ManageItemsPageState extends State<ManageItemsPage> {
   
-  // Method to handle deletion from Firebase
   void deleteItem(String docId) async {
     bool confirm = await _showDeleteDialog();
     if (confirm) {
+      // delete item mn el selected collection
       await FirebaseFirestore.instance
           .collection(widget.collectionPath)
           .doc(docId)
@@ -35,7 +35,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
     }
   }
 
-  // Confirmation dialog before deleting
+  // confirm ma3 el user before deleting
   Future<bool> _showDeleteDialog() async {
     return await showDialog(
       context: context,
@@ -60,8 +60,8 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
         backgroundColor: fueRed,
         foregroundColor: Colors.white,
       ),
-      // Real-time listener to Firestore
       body: StreamBuilder<QuerySnapshot>(
+        // listen to Firestore changes in real time
         stream: FirebaseFirestore.instance
             .collection(widget.collectionPath)
             .snapshots(),        
@@ -89,6 +89,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
           return ListView.builder(
             itemCount: docs.length,
             itemBuilder: (context, index) {
+              // get document data as map
               final data = docs[index].data() as Map<String, dynamic>;
               final String docId = docs[index].id;
 
@@ -103,6 +104,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
                     children: [
                       Expanded(
                         child: Text(
+                          // law title msh mawgood y5od name, law el etneen msh mawgoodeen: "No Title"
                           data['title'] ?? data['name'] ?? 'No Title',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
@@ -146,7 +148,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
                           MaterialPageRoute(
                             builder: (_) => AddEditItemPage(
                               collectionPath: widget.collectionPath,
-                              docId: docId, // Pass ID to edit existing
+                              docId: docId,
                               itemData: data,
                             ),
                           ),

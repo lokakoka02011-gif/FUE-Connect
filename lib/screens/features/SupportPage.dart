@@ -6,7 +6,7 @@ class SupportPage extends StatelessWidget {
 
   final Color fueRed = const Color(0xffb1170c);
 
-  // General Launch Function with Technical Safeguards
+  // function beteftah links
   Future<void> _launchUrl(Uri uri) async {
     try {
       if (await canLaunchUrl(uri)) {
@@ -20,7 +20,7 @@ class SupportPage extends StatelessWidget {
     }
   }
 
-  // Email Logic
+  // send email to support (redirect)
   Future<void> _sendEmail() async {
     final Uri uri = Uri(
       scheme: 'mailto',
@@ -30,13 +30,13 @@ class SupportPage extends StatelessWidget {
     await _launchUrl(uri);
   }
 
-  // Phone Call Logic
+  // Phone call 
   Future<void> _makeCall() async {
-    final Uri uri = Uri(scheme: 'tel', path: '+20123456789'); // Replace with actual FUE number
+    final Uri uri = Uri(scheme: 'tel', path: '+2012345678'); 
     await _launchUrl(uri);
   }
 
-  // Social Media Links
+  // Social media links
   Future<void> _launchSocial(String platform) async {
     final String url = platform == 'instagram' 
       ? 'https://www.instagram.com/fue_egypt' 
@@ -54,6 +54,12 @@ class SupportPage extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -68,7 +74,6 @@ class SupportPage extends StatelessWidget {
             const Text("Get in touch with the FUE Connect team or find answers below."),
             const SizedBox(height: 30),
 
-            // Top Row: Email and Live Chat
             Row(
               children: [
                 Expanded(
@@ -84,7 +89,7 @@ class SupportPage extends StatelessWidget {
                 Expanded(
                   child: _buildContactBox(
                     context,
-                    Icons.forum_rounded, // Improved Live Chat icon
+                    Icons.forum_rounded, 
                     "Live Chat",
                     Colors.green,
                     onTap: () {
@@ -97,7 +102,6 @@ class SupportPage extends StatelessWidget {
             ),
             const SizedBox(height: 15),
             
-            // Emergency Button
             _buildContactBox(
               context,
               Icons.phone_in_talk_rounded,
@@ -113,17 +117,17 @@ class SupportPage extends StatelessWidget {
             const SizedBox(height: 15),
             Row(
               children: [
-                // Branded Instagram Button
+                // instagram Button
                 _buildSocialIconButton(
                   icon: Icons.camera_alt_rounded,
-                  color: Colors.purple, // Instagram Vibe
+                  color: Colors.purple, 
                   onPressed: () => _launchSocial('instagram'),
                 ),
                 const SizedBox(width: 15),
-                // Branded Facebook Button
+                // Facebook Button
                 _buildSocialIconButton(
                   icon: Icons.facebook_rounded,
-                  color: const Color(0xFF1877F2), // Official Facebook Blue
+                  color: const Color(0xFF1877F2), 
                   onPressed: () => _launchSocial('facebook'),
                 ),
               ],
@@ -160,7 +164,7 @@ class SupportPage extends StatelessWidget {
     );
   }
 
-  // Social Button Helper for brand accuracy and clickability
+// build social button
   Widget _buildSocialIconButton({required IconData icon, required Color color, required VoidCallback onPressed}) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -179,7 +183,7 @@ class SupportPage extends StatelessWidget {
     );
   }
 
-  // Contact Box with InkWell for better hit-testing and ripple feedback
+// build contact box (clickable)
   Widget _buildContactBox(BuildContext context, IconData icon, String label, Color color,
       {bool isFullWidth = false, required VoidCallback onTap}) {
     return MouseRegion(

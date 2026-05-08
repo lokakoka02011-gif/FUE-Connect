@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-// Import your main.dart to access UniversalConnectCard and CategoryPill
 import 'package:fue_connect/main.dart'; 
+import 'package:fue_connect/widgets/filter_pills.dart';
+import 'package:fue_connect/widgets/loading_indicator.dart';
+import 'package:fue_connect/screens/features/formsPage.dart';
 
 class EventsPage extends StatefulWidget {
   const EventsPage({super.key});
@@ -47,22 +49,18 @@ class _EventsPageState extends State<EventsPage> {
           ),
 
           // 2. UNIVERSAL CATEGORY PILLS
-          SizedBox(
-            height: 45,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                return CategoryPill(
-                  label: _categories[index],
-                  isSelected: _selectedCategory == _categories[index],
-                  onTap: () => setState(() => _selectedCategory = _categories[index]),
-                );
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: FilterPills(
+              options: _categories,
+              selected: _selectedCategory,
+              onSelected: (value) {
+                setState(() {
+                  _selectedCategory = value;
+                });
               },
             ),
           ),
-
           // 3. SORT & HEADER ROW
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
@@ -91,16 +89,21 @@ class _EventsPageState extends State<EventsPage> {
               builder: (context, snapshot) {
                 if (snapshot.hasError) return const Center(child: Text("Error loading events"));
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: Color(0xffb1170c)));
-                }
-
+              return const Center(
+                child: LoadingIndicator(),
+              );
+            }
+            
                 List<QueryDocumentSnapshot> docs = snapshot.data!.docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final name = (data['name'] ?? "").toString().toLowerCase();
                   final category = data['category'] ?? "All";
                   
                   // Date Filtering: Hide expired events
-                  DateTime eventDate = (data['date'] as Timestamp).toDate();
+                  if (data['date'] == null) return false;
+
+                  DateTime eventDate =
+                      (data['date'] as Timestamp).toDate();
                   bool isExpired = eventDate.isBefore(DateTime.now().subtract(const Duration(hours: 5)));
 
                   return name.contains(_searchQuery) && 
@@ -127,8 +130,7 @@ class _EventsPageState extends State<EventsPage> {
                     return UniversalConnectCard(
                       title: data['name'] ?? "Event",
                       subtitle: data['description'] ?? "",
-                      imageUrl: data['imageUrl'],
-                      onTap: () => _showEventDetails(context, data),
+                      imageUrl: data['imageUrl'] ?? "https://via.placeholder.com/300",                      onTap: () => _showEventDetails(context, data),
                       infoRows: [
                         Row(
                           children: [
@@ -166,39 +168,57 @@ class _EventsPageState extends State<EventsPage> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
-            const SizedBox(height: 20),
-            Text(data['name'] ?? 'Event', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 15),
-            _detailRow(Icons.location_on, "Location: ", data['location'] ?? "Campus"),
-            _detailRow(Icons.category, "Category: ", data['category'] ?? "General"),
-            _detailRow(Icons.timer, "Time: ", DateFormat('jm').format((data['date'] as Timestamp).toDate())),
-            const Divider(height: 30),
-            const Text("About Event", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 8),
-            Text(data['description'] ?? 'No description available.', style: TextStyle(color: Colors.grey[800], height: 1.4)),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xffb1170c),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
+              const SizedBox(height: 20),
+              Text(data['name'] ?? 'Event', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 15),
+              _detailRow(Icons.location_on, "Location: ", data['location'] ?? "Campus"),
+              _detailRow(Icons.category, "Category: ", data['category'] ?? "General"),
+              _detailRow(
+                Icons.timer, 
+                "Time: ", 
+                data['date'] != null
+                  ? DateFormat('jm')
+                      .format((data['date'] as Timestamp).toDate())
+                  : "Unknown"  
+              ),                 
+              const Divider(height: 30),
+              const Text("About Event", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              Text(data['description'] ?? 'No description available.', style: TextStyle(color: Colors.grey[800], height: 1.4)),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xffb1170c),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => FormsPage(data: data),
+                      ),
+                    );
+                  },
+                  child: const Text("Register for Event", 
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
-                onPressed: () {},
-                child: const Text("Register for Event", 
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-            ),
-            const SizedBox(height: 10),
-          ],
-        ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ) 
       ),
     );
   }

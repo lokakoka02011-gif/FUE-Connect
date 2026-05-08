@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 
 class AddEditItemPage extends StatefulWidget {
   final String collectionPath;
-  final String? docId; // If null, we are ADDING. If not null, we are EDITING.
+  final String? docId;  
   final Map<String, dynamic>? itemData;
 
   const AddEditItemPage({
@@ -31,6 +31,7 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
   File? _selectedImage;
   String? _existingImageUrl;
   bool _isLoading = false;
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -45,7 +46,18 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
     }
   }
 
-  // --- IMAGE PICKING LOGIC ---
+
+    @override
+    void dispose() {
+      titleController.dispose();
+      descController.dispose();
+      requirementsController.dispose();
+      deadlineController.dispose();
+      locationController.dispose();
+      super.dispose();
+    }
+
+
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 70);
     if (pickedFile != null) {
@@ -55,22 +67,15 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
     }
   }
 
-  // --- FIREBASE UPLOAD LOGIC ---
   Future<void> saveItem() async {
-    if (titleController.text.isEmpty ||
-        descController.text.isEmpty ||
-        requirementsController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all required fields")),
-      );
-      return;
-    }
+      if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
 
     try {
       String? imageUrl = _existingImageUrl;
 
-      // 1. Upload new image if selected
+// upload new image only law user selected one
       if (_selectedImage != null) {
         final ref = FirebaseStorage.instance
             .ref()
@@ -91,21 +96,34 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
         "updatedAt": FieldValue.serverTimestamp(),
       };
 
-      // 2. Save to Firestore
+// save to firestore. if no docId create new, gher keda update existing
       if (widget.docId == null) {
-        // Create new
-        await FirebaseFirestore.instance.collection(widget.collectionPath).add(data);
+        data["createdAt"] = FieldValue.serverTimestamp();
+
+        await FirebaseFirestore.instance
+            .collection(widget.collectionPath)
+            .add(data);
       } else {
-        // Update existing
         await FirebaseFirestore.instance.collection(widget.collectionPath).doc(widget.docId).update(data);
       }
 
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Saved successfully"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pop(context);
+      }
+
     } catch (e) {
-      print("Error saving: $e");
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
-      setState(() => _isLoading = false);
+        if (mounted) {
+        setState(() => _isLoading = false);
+        }
     }
   }
 
@@ -121,11 +139,13 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
       ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator(color: fueRed))
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                
+        : Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  
                 const SizedBox(height: 15),                
                 GestureDetector(
                   onTap: _pickImage,
@@ -140,19 +160,43 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
                     child: _selectedImage != null
                         ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.file(_selectedImage!, fit: BoxFit.cover))
                         : (_existingImageUrl != null 
-                            ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(_existingImageUrl!, fit: BoxFit.cover))
+                            ? ClipRRect(borderRadius: BorderRadius.circular(10), 
+                            child:Image.network(
+                                _existingImageUrl!, 
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(
+                                    Icons.broken_image,
+                                    size: 50,
+                                    color: Colors.grey,
+                                    );
+                                },
+                                ))
                             : const Icon(Icons.add_a_photo, size: 50, color: Colors.grey)),
                   ),
                 ),
                 const SizedBox(height: 20),
-                TextField(
+                TextFormField(
                   controller: titleController,
-                  decoration: const InputDecoration(labelText: "Title", border: OutlineInputBorder()),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "Title is required";
+                    }
+                    return null;
+                  },                  
+                  decoration: const InputDecoration(
+                    labelText: "Title", border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 15),
 
-                TextField(
+                TextFormField(
                   controller: descController,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "Description is required";
+                    }
+                    return null;
+                  },                  
                   maxLines: 4,
                   decoration: const InputDecoration(
                     labelText: "Description",
@@ -162,8 +206,14 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
 
                 const SizedBox(height: 15),
 
-                TextField(
+                TextFormField(
                   controller: requirementsController,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "Requirements are required";
+                    }
+                    return null;
+                  },                  
                   maxLines: 3,
                   decoration: const InputDecoration(
                     labelText: "Requirements",
@@ -203,7 +253,8 @@ class _AddEditItemPageState extends State<AddEditItemPage> {
                 ),
               ],
             ),
-          ),
+          )
+      ),
     );
   }
 }

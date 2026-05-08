@@ -11,7 +11,7 @@ class UserModel {
     required this.profilePic,
   });
 
-  // Convert Firestore Document to Dart Object
+// map = Firestore data, then ben7awelha l UserModel
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       uid: map['uid'] ?? '',
@@ -21,7 +21,6 @@ class UserModel {
     );
   }
 
-  // Convert Dart Object to Map to save to Firestore
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,

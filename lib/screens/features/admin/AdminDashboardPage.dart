@@ -11,8 +11,8 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {  
-  // Removed totalUsers, totalApplications, totalOpportunities, and fetchStats logic
 
+// sign out admin w go back to login
   void _handleLogout(BuildContext context) async {
     final authService = AuthService();
     await authService.signOut();
@@ -26,12 +26,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Note: Ensure collectionKey matches your Firestore exactly (case-sensitive)
     final List<Map<String, dynamic>> sections = [
       {"title": "Clubs", "icon": Icons.groups, "collectionKey": "Clubs"},
       {"title": "Events", "icon": Icons.event, "collectionKey": "Events"},
       {"title": "Opportunities", "icon": Icons.work, "collectionKey": "Opportunity"},
-      {"title": "Volunteering", "icon": Icons.volunteer_activism, "collectionKey": "volunteering"}, // Fixed key case
+      {"title": "Volunteering", "icon": Icons.volunteer_activism, "collectionKey": "volunteering"}, 
     ];
 
     const Color fueRed = Color(0xffb1170c);
@@ -61,7 +60,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ),
           ),
           
-          // Counters section has been removed from here
 
           Expanded(
             child: GridView.builder(
@@ -75,7 +73,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
               itemBuilder: (context, index) {
                 final section = sections[index];
-                // Fallback for empty titles
                 final String displayTitle = (section["title"] == null || section["title"].isEmpty) 
                     ? "Unnamed Section" 
                     : section["title"];
@@ -104,13 +101,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration:const  BoxDecoration(
-                            color: Colors.white, // Fixed: Red background
+                            color: Colors.white, 
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             section["icon"], 
                             size: 40, 
-                            color: Colors.red // Fixed: White icon
+                            color: Colors.red 
                           ),
                         ),
                         const SizedBox(height: 12),

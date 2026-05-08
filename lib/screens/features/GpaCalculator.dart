@@ -8,25 +8,22 @@ class GpaCalculator extends StatefulWidget {
 }
 
 class _GpaCalculatorState extends State<GpaCalculator> {
-  // FUE Grading Scale Mapping
+// map letter grades l GPA values so it's used in calculations  
   final Map<String, double> gradingScale = {
     'A': 4.0, 'A-': 3.7, 'B+': 3.3, 'B': 3.0, 'B-': 2.7,
     'C+': 2.3, 'C': 2.0, 'C-': 1.7, 'D+': 1.3, 'D': 1.0, 'F': 0.0,
   };
 
-  // Mode 1: Quick CGPA Predictor Controllers
   final TextEditingController currentCgpaController = TextEditingController();
   final TextEditingController completedHoursController = TextEditingController();
   final TextEditingController expectedSemesterGpaController = TextEditingController();
   final TextEditingController semesterHoursController = TextEditingController();
   double? quickResult;
 
-  // Mode 2: Semester Planner Data (with name controllers)
   List<Map<String, dynamic>> subjects = [
     {'nameController': TextEditingController(text: 'Subject 1'), 'hours': 3, 'grade': 'A'},
   ];
 
-  // Logic for Mode 1
   void calculateQuickCgpa() {
     double currentCgpa = double.tryParse(currentCgpaController.text) ?? 0.0;
     double completedHours = double.tryParse(completedHoursController.text) ?? 0.0;
@@ -41,7 +38,6 @@ class _GpaCalculatorState extends State<GpaCalculator> {
     });
   }
 
-  // Logic for Mode 2
   double calculateSemesterGpa() {
     double totalPoints = 0;
     double totalHours = 0;
@@ -81,7 +77,6 @@ class _GpaCalculatorState extends State<GpaCalculator> {
     );
   }
 
-  // --- UI FOR MODE 2: SEMESTER PLANNER ---
   Widget _buildSemesterPlanner() {
     double currentGpa = calculateSemesterGpa();
 
@@ -135,7 +130,7 @@ class _GpaCalculatorState extends State<GpaCalculator> {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   child: Row(
                     children: [
-                      // Editable Name
+                      // Editable object name
                       Expanded(
                         flex: 3,
                         child: TextField(
@@ -147,7 +142,6 @@ class _GpaCalculatorState extends State<GpaCalculator> {
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
-                      // Credits Dropdown
                       DropdownButton<int>(
                         value: subjects[index]['hours'],
                         underline: const SizedBox(),
@@ -155,7 +149,6 @@ class _GpaCalculatorState extends State<GpaCalculator> {
                         onChanged: (val) => setState(() => subjects[index]['hours'] = val),
                       ),
                       const SizedBox(width: 8),
-                      // Grade Dropdown
                       DropdownButton<String>(
                         value: subjects[index]['grade'],
                         underline: const SizedBox(),
@@ -174,7 +167,6 @@ class _GpaCalculatorState extends State<GpaCalculator> {
           ),
         ),
 
-        // Action Footer
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: ElevatedButton.icon(
@@ -196,7 +188,6 @@ class _GpaCalculatorState extends State<GpaCalculator> {
     );
   }
 
-  // --- UI FOR MODE 1: QUICK PREDICTOR ---
   Widget _buildQuickCalculator() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),

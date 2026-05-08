@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
-    // 1. Convert ID to lowercase and trim spaces for case-insensitivity
+// convert input to lowercase (for admin login) w removes spaces
     final idInput = _emailController.text.trim().toLowerCase();
     final fullEmail = "$idInput@fue.edu.eg";
 
@@ -39,7 +39,8 @@ class _LoginScreenState extends State<LoginScreen> {
         email: fullEmail,
         password: _passwordController.text,
       );
-
+      
+// law input 8 arkam it's a student/alumni, otherwise adminstrator
       if (mounted) {
         bool isStudent = RegExp(r'^\d{8}$').hasMatch(idInput);
         
@@ -50,8 +51,9 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } catch (e) {
+
+// error message l wrong email aw wrong password
       if (mounted) {
-        // Display generic error for both wrong email and wrong password
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Wrong password or email. Please try again."), 
@@ -72,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     try {
-      // Apply lowercase logic to reset as well
+      // same lowercase logic ashan el email yb2a consistent
       final fullEmail = "${_emailController.text.trim().toLowerCase()}@fue.edu.eg";
       await _authService.sendPasswordReset(fullEmail);
       if (mounted) {
@@ -115,14 +117,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Text('Login to your account', style: TextStyle(color: Colors.grey)),
                   const SizedBox(height: 40),
 
-                  // ID Field with Locked Domain and Badge Icon
                   TextFormField(
                     controller: _emailController,
                     textInputAction: TextInputAction.next,
-                    autocorrect: false, // Prevents ID being changed by phone
+                    autocorrect: false, 
                     enableSuggestions: false,
                     decoration: InputDecoration(
-                      labelText: 'ID', // Only ID
+                      labelText: 'ID', 
                       prefixIcon: Icon(Icons.badge_outlined, color: fueRed),
                       suffixText: "@fue.edu.eg", 
                       suffixStyle: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),

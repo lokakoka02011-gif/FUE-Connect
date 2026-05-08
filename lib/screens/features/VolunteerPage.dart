@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fue_connect/widgets/loading_indicator.dart';
 import 'package:intl/intl.dart';
-// Import your main.dart to access UniversalConnectCard and CategoryPill
 import 'package:fue_connect/main.dart'; 
+import 'package:fue_connect/widgets/filter_pills.dart';
+import 'package:fue_connect/screens/features/formsPage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class VolunteerPage extends StatefulWidget {
   const VolunteerPage({super.key});
@@ -12,6 +15,7 @@ class VolunteerPage extends StatefulWidget {
 }
 
 class _VolunteerPageState extends State<VolunteerPage> {
+  final Set<String> _savedVolunteerIds = {};
   String _searchQuery = "";
   String _selectedArea = "All";
   final List<String> _impactAreas = ['All', 'Teaching', 'Environment', 'Charity', 'Events'];
@@ -27,14 +31,14 @@ class _VolunteerPageState extends State<VolunteerPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. SEARCH BAR
+          // search bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Search volunteer roles...',
-                prefixIcon: const Icon(Icons.volunteer_activism, color: Color(0xffb1170c)),
+                prefixIcon: const Icon(Icons.search, color: Color(0xffb1170c)),
                 filled: true,
                 fillColor: Colors.grey[100],
                 border: OutlineInputBorder(
@@ -45,46 +49,37 @@ class _VolunteerPageState extends State<VolunteerPage> {
             ),
           ),
 
-          // 2. IMPACT AREAS (Pills)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text("Impact Areas", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-          SizedBox(
-            height: 45,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _impactAreas.length,
-              itemBuilder: (context, index) {
-                return CategoryPill(
-                  label: _impactAreas[index],
-                  isSelected: _selectedArea == _impactAreas[index],
-                  onTap: () => setState(() => _selectedArea = _impactAreas[index]),
-                );
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: FilterPills(
+              options: _impactAreas,
+              selected: _selectedArea,
+              onSelected: (value) {
+                setState(() {
+                  _selectedArea = value;
+                });
               },
             ),
-          ),
-
+          ),         
           const SizedBox(height: 10),
 
-          // 3. OPPORTUNITIES LIST
+          // opportunities list
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('opportunities')
-                  .where('type', isEqualTo: 'volunteering')
+                  .collection('Opportunity')
+                  .where('Type', isEqualTo: 'Volunteer')
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) return const Center(child: Text("Something went wrong"));
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: Color(0xffb1170c)));
+                  return const Center(child: LoadingIndicator());
                 }
 
                 final docs = snapshot.data!.docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final title = (data['title'] ?? "").toString().toLowerCase();
-                  final area = data['impactArea'] ?? "All"; // Assuming you have an 'impactArea' field
+                  final area = data['impactArea'] ?? "All"; 
                   
                   return title.contains(_searchQuery) && 
                          (_selectedArea == "All" || area == _selectedArea);
@@ -99,8 +94,10 @@ class _VolunteerPageState extends State<VolunteerPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemBuilder: (context, index) {
                     var data = docs[index].data() as Map<String, dynamic>;
+                    final docId = docs[index].id;
+                    bool isSaved = _savedVolunteerIds.contains(docId);
                     
-                    // Format deadline
+                    // Formating el deadline date
                     String formattedDate = "No Deadline";
                     if (data['deadline'] != null) {
                       formattedDate = DateFormat('dd MMM yyyy').format((data['deadline'] as Timestamp).toDate());
@@ -110,14 +107,20 @@ class _VolunteerPageState extends State<VolunteerPage> {
                       title: data['title'] ?? 'Untitled',
                       subtitle: "By ${data['companyName'] ?? 'FUE Partner'}",
                       imageUrl: data['imageUrl'],
-                      // Urgent Badge logic
-                      trailing: data['isUrgent'] == true 
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(12)),
-                            child: const Text("URGENT", style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                          ) 
-                        : null,
+
+                    trailing: IconButton(
+                      icon: Icon(
+                        isSaved
+                            ? Icons.bookmark
+                            : Icons.bookmark_border,
+                        color: isSaved
+                            ? const Color(0xffb1170c)
+                            : Colors.grey,
+                      ),
+                      onPressed: () =>
+                          _toggleSaveVolunteer(docId, data),
+                    ),
+
                       infoRows: [
                         Row(
                           children: [
@@ -143,6 +146,7 @@ class _VolunteerPageState extends State<VolunteerPage> {
     );
   }
 
+// show details popup lel volunteer
   void _showVolunteerDetails(BuildContext context, Map<String, dynamic> data) {
     showModalBottomSheet(
       context: context,
@@ -154,42 +158,89 @@ class _VolunteerPageState extends State<VolunteerPage> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
-            const SizedBox(height: 20),
-            Text(data['title'] ?? 'Volunteer Role', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Text("Organized by ${data['companyName'] ?? 'FUE Partner'}", style: const TextStyle(color: Color(0xffb1170c), fontWeight: FontWeight.w500)),
-            const Divider(height: 30),
-            _detailRow(Icons.public, "Impact Area: ", data['impactArea'] ?? "General"),
-            _detailRow(Icons.payments, "Compensation: ", data['pay']?.toString() ?? "Unpaid"),
-            const SizedBox(height: 20),
-            const Text("About the Role", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 8),
-            Text(data['description'] ?? 'Help your community by joining this initiative!', style: TextStyle(color: Colors.grey[800], height: 1.4)),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xffb1170c),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
+              const SizedBox(height: 20),
+              Text(data['title'] ?? 'Volunteer Role', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Text("Organized by ${data['companyName'] ?? 'FUE Partner'}", style: const TextStyle(color: Color(0xffb1170c), fontWeight: FontWeight.w500)),
+              const Divider(height: 30),
+              _detailRow(Icons.public, "Impact Area: ", data['impactArea'] ?? "General"),
+              _detailRow(Icons.payments, "Compensation: ", data['pay']?.toString() ?? "Unpaid"),
+              const SizedBox(height: 20),
+              const Text("About the Role", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              Text(data['description'] ?? 'Help your community by joining this initiative!', style: TextStyle(color: Colors.grey[800], height: 1.4)),
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xffb1170c),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FormsPage(data: data),
+                        ),
+                      );
+                  },
+                  child: const Text("Apply to Volunteer", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
-                onPressed: () {},
-                child: const Text("Apply to Volunteer", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-            ),
-            const SizedBox(height: 10),
-          ],
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
-      ),
+      )
     );
   }
 
+  Future<void> _toggleSaveVolunteer(
+    String docId,
+    Map<String, dynamic> data,
+  ) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) return;
+
+    final savedRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('saved_items')
+        .doc(docId);
+
+    final doc = await savedRef.get();
+
+    if (doc.exists) {
+      await savedRef.delete();
+
+      setState(() {
+        _savedVolunteerIds.remove(docId);
+      });
+    } else {
+      await savedRef.set({
+        'title': data['title'],
+        'type': 'Volunteer',
+        'imageUrl': data['imageUrl'],
+        'route': '/volunteer',
+        'savedAt': Timestamp.now(),
+      });
+
+      setState(() {
+        _savedVolunteerIds.add(docId);
+      });
+    }
+  }
+// row feh icon + label + value
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:fue_connect/widgets/loading_indicator.dart';
+import 'package:fue_connect/widgets/filter_pills.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -11,7 +13,9 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
+  // currently selected notification category for filtering
   String _selectedCategory = "All";
+  String _searchQuery = "";
   final List<String> _categories = [
     "All",
     "Application",
@@ -20,12 +24,13 @@ class _NotificationPageState extends State<NotificationPage> {
     "Opportunity"
   ];
 
+// reference path used to match notifications for current user
   String get studentPath => "/Students/${FirebaseAuth.instance.currentUser?.uid}";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Clean white background
+      backgroundColor: Colors.white, 
       appBar: AppBar(
         title: const Text("Notifications"),
         backgroundColor: const Color(0xffb1170c),
@@ -33,74 +38,77 @@ class _NotificationPageState extends State<NotificationPage> {
       ),
       body: Column(
         children: [
-          // 1. IMPROVED CATEGORY BAR (Matches your Screenshot)
-          Container(
-            height: 60,
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                String cat = _categories[index];
-                bool isSelected = _selectedCategory == cat;
-
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedCategory = cat),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.only(right: 10),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xffb1170c) : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xffb1170c), // Always red border
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Center(
-                      child: Row(
-                        children: [
-                          if (isSelected)
-                            const Icon(Icons.check, color: Colors.white, size: 16),
-                          if (isSelected) const SizedBox(width: 5),
-                          Text(
-                            cat,
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : Colors.black87,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              onChanged: (value) =>
+                  setState(() => _searchQuery = value.toLowerCase()),
+              decoration: InputDecoration(
+                hintText: 'Search notifications...',
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: Color(0xffb1170c),
+                ),
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          // category selector (lama ados yghayar el filter)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: FilterPills(
+              options: _categories,
+              selected: _selectedCategory,
+              onSelected: (value) {
+                setState(() {
+                  _selectedCategory = value;
+                });
               },
             ),
           ),
 
-          // 2. DYNAMIC NOTIFICATION LIST
+          // listen to notifications from Firestore
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('Notifications')
-                  .where('studentRef', isEqualTo: studentPath)
+                  .where(
+                    'userRef',
+                    isEqualTo: "/users/${FirebaseAuth.instance.currentUser?.uid}",
+                  )
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const Center(
+                    child: LoadingIndicator(),
+                  );
                 }
-                
-                // Filter locally
+
+                // filter el notifications ala hasab el category
                 final docs = snapshot.data?.docs.where((doc) {
-                  if (_selectedCategory == "All") return true;
-                  String type = doc['notification_type'].toString().replaceAll('"', '');
-                  return type.toLowerCase() == _selectedCategory.toLowerCase();
+
+                  final data = doc.data() as Map<String, dynamic>;
+
+                  String type = (data['notification_type'] ?? "")
+                     .toString()
+                     .toLowerCase();
+                        String message = 
+                          (data['notification_message']??"")
+                            .toString()
+                            .toLowerCase();
+
+                  bool matchesCategory =
+                      _selectedCategory == "All" ||
+                      type == _selectedCategory.toLowerCase();
+                  bool matchesSearch =
+                      message.contains(_searchQuery);
+                  return matchesCategory && matchesSearch;                    
                 }).toList() ?? [];
 
                 if (docs.isEmpty) {
@@ -112,7 +120,7 @@ class _NotificationPageState extends State<NotificationPage> {
                              size: 64, color: Colors.grey[300]),
                         const SizedBox(height: 16),
                         Text(
-                          "No $_selectedCategory notifications yet.",
+                          "No notifications in $_selectedCategory yet.",
                           style: const TextStyle(color: Colors.grey, fontSize: 16),
                         ),
                       ],
@@ -126,6 +134,7 @@ class _NotificationPageState extends State<NotificationPage> {
                   itemBuilder: (context, index) {
                     var doc = docs[index];
                     var data = doc.data() as Map<String, dynamic>;
+                    // check law el notification read to change status
                     bool isRead = data['isRead'] ?? false;
                     DateTime dt = (data['timestamp'] as Timestamp).toDate();
 
@@ -182,7 +191,7 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  // Helper to make the list look organized with icons
+  // convert notification type le icon 3ashan UI yb2a awdah
   IconData _getIconForType(dynamic type) {
     String t = type.toString().toLowerCase();
     if (t.contains("club")) return Icons.group_work_rounded;

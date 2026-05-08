@@ -5,22 +5,22 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Get current user
+  // get current user logged in 
   User? get currentUser => _auth.currentUser;
 
-  // Stream of auth state changes
+  // track login aw logout changes  
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // ── REGISTER WITH EMAIL & PASSWORD ──────────────────
+// register user with email & password  
   Future<UserCredential?> registerWithEmail({
     required String email,
     required String password,
     required String firstName,
     required String lastName,
-    required String role, // Kept to avoid UI errors, but overwritten by logic below
+    required String role, 
   }) async {
     try {
-      // Clean inputs to prevent "Wrong Password" or "User Not Found" errors
+    // clean input 3shan mayezharsh errors fel login      
       final String cleanEmail = email.trim().toLowerCase();
       final String cleanPassword = password.trim();
 
@@ -30,9 +30,8 @@ class AuthService {
         password: cleanPassword,
       );
 
-      // --- LOGIC: 8 digits = student, otherwise = admin ---
+      // check if first half of mail is 8 digits user is student, otherwise admin
       String idPart = cleanEmail.split('@')[0];
-      // Regex checks if the ID part is EXACTLY 8 digits
       bool is8Digits = RegExp(r'^\d{8}$').hasMatch(idPart);
       String assignedRole = is8Digits ? 'student' : 'admin';
 
@@ -52,13 +51,13 @@ class AuthService {
     }
   }
 
-  // ── LOGIN WITH EMAIL & PASSWORD ──────────────────────
+// login with email & password  
   Future<UserCredential?> loginWithEmail({
     required String email,
     required String password,
   }) async {
     try {
-      // Clean inputs to avoid accidental space/case errors
+      // remove spaces w uppercase
       return await _auth.signInWithEmailAndPassword(
         email: email.trim().toLowerCase(),
         password: password.trim(),
@@ -68,7 +67,7 @@ class AuthService {
     }
   }
 
-  // ── GET USER ROLE ────────────────────────────────────
+  // get user role mn firestore
   Future<String> getUserRole(String uid) async {
     try {
       DocumentSnapshot doc = await _db.collection('users').doc(uid).get();
@@ -81,12 +80,12 @@ class AuthService {
     }
   }
 
-  // ── SIGN OUT ─────────────────────────────────────────
+  // logout user  
   Future<void> signOut() async {
     await _auth.signOut();
   }
 
-  // ── PASSWORD RESET ───────────────────────────────────
+  // send reset password email
   Future<void> sendPasswordReset(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim().toLowerCase());
@@ -95,9 +94,8 @@ class AuthService {
     }
   }
 
-  // ── ERROR HANDLER ────────────────────────────────────
+  // handle firebase auth errors
   String _handleAuthError(FirebaseAuthException e) {
-    // Printing the code helps you debug in the VS Code console
     print("Firebase Auth Error Code: ${e.code}");
     
     switch (e.code) {
