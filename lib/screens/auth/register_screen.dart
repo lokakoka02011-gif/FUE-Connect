@@ -14,7 +14,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final AuthService _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _studentIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
@@ -26,7 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _studentIdController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _firstNameController.dispose();
@@ -46,7 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
-    final String input = _emailController.text.trim();
+    final String input = _studentIdController.text.trim();
     final String fullEmail = "$input@fue.edu.eg";
 
 // check if input is 8 arkam is student, otherwise admin
@@ -66,21 +66,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
       User? user = FirebaseAuth.instance.currentUser;
 
       if (user != null) {
-        // use ID as doc id for students, otherwise admin_<uid>
-        String docId = isStudent ? input : "admin_${user.uid}";
+        // use firebase user if as doc id 
 
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(docId)
-            .set({
-          'email': fullEmail,
-          'firstName': _firstNameController.text.trim(),
-          'lastName': _lastNameController.text.trim(),
-          'role': userRole,
-          'uid': user.uid,
-          if (isStudent) 'id': input,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({
+        'uid': user.uid,
+
+        'studentId': isStudent ? input : null,
+
+        'email': fullEmail,
+
+        'firstName': _firstNameController.text.trim(),
+
+        'lastName': _lastNameController.text.trim(),
+
+        'fullName':
+            '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
+
+        'role': userRole,
+
+        'faculty': null,
+        'major': null,
+        'minor': null,
+        'cgpa': null,
+
+        'profileCompleted': false,
+
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
 
         // send email verification
         if (!user.emailVerified) {
@@ -156,14 +172,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _firstNameController,
                   decoration: const InputDecoration(labelText: "First Name", border: OutlineInputBorder()),
                   validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return "Enter your university ID";
+                    if (v == null || v.trim().isEmpty) {
+                      return "Enter your first name";
                     }
-
-                    if (!RegExp(r'^\d{8}$').hasMatch(v)) {
-                      return "ID must be 8 digits";
-                    }
-
                     return null;
                   }, ),
                 const SizedBox(height: 16),
@@ -176,14 +187,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  controller: _emailController,
+                  controller: _studentIdController,
                   decoration: const InputDecoration(
                     labelText: "University ID",
                     hintText: "e.g. 20221700",
                     suffixText: "@fue.edu.eg",
                     border: OutlineInputBorder()
                   ),
-                  validator: (v) => v!.isEmpty ? "Enter your 8-digit ID" : null,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return "Enter your ID";
+                    }
+
+                    final value = v.trim();
+
+                    final isStudent =
+                        RegExp(r'^\d{8}$').hasMatch(value);
+
+                    final isAdmin =
+                        RegExp(r'^[a-zA-Z.]+$').hasMatch(value);
+
+                    if (!isStudent && !isAdmin) {
+                      return "Invalid ID format";
+                    }
+
+                    return null;
+                  },
+
                 ),
                 const SizedBox(height: 16),
 

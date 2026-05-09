@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class SupportPage extends StatelessWidget {
   const SupportPage({super.key});
@@ -50,16 +51,7 @@ class SupportPage extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('FUE Support Center'),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
+        automaticallyImplyLeading: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -119,14 +111,14 @@ class SupportPage extends StatelessWidget {
               children: [
                 // instagram Button
                 _buildSocialIconButton(
-                  icon: Icons.camera_alt_rounded,
+                  icon: FontAwesomeIcons.instagram,
                   color: Colors.purple, 
                   onPressed: () => _launchSocial('instagram'),
                 ),
                 const SizedBox(width: 15),
                 // Facebook Button
                 _buildSocialIconButton(
-                  icon: Icons.facebook_rounded,
+                  icon: FontAwesomeIcons.facebook,
                   color: const Color(0xFF1877F2), 
                   onPressed: () => _launchSocial('facebook'),
                 ),

@@ -13,6 +13,7 @@ class _HomePageState extends State<HomePage> {
   late PageController _pageController;
   int _currentPage = 5000;
   late Timer _timer;
+late Stream<QuerySnapshot> _postsStream;
 
   // Change this variable to 0 and the red dot/number will vanish!
   int notificationCount = 0; 
@@ -26,21 +27,25 @@ class _HomePageState extends State<HomePage> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(viewportFraction: 1.0, initialPage: _currentPage);
-    _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
-      if (_pageController.hasClients) {
-        _currentPage++;
-        _pageController.animateToPage(
-          _currentPage,
-          duration: const Duration(milliseconds: 350),
-          curve: Curves.easeIn,
-        );
-      }
-    });
-  }
+    void initState() {
+      super.initState();      
+      _postsStream = FirebaseFirestore.instance
+          .collection('posts')
+          .orderBy('createdAt', descending: true) 
+          .snapshots();
 
+      _pageController = PageController(viewportFraction: 1.0, initialPage: _currentPage);
+      _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
+        if (_pageController.hasClients) {
+          _currentPage++;
+          _pageController.animateToPage(
+            _currentPage,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeIn,
+          );
+        }
+      });
+    }
   @override
   void dispose() {
     _timer.cancel();
@@ -134,9 +139,7 @@ SizedBox(
               const SizedBox(height: 10),
               
               StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collectionGroup('posts')
-                    .snapshots(),
+                stream: _postsStream,
                 builder: (context, snapshot) {
                   if (snapshot.hasError) return const Center(child: Text("Error loading posts"));
                   if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());

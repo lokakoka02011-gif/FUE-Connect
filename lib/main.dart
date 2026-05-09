@@ -26,7 +26,7 @@ import 'package:fue_connect/screens/features/CampusMapPage.dart';
 import 'package:fue_connect/screens/features/AcademicCalendarPage.dart';
 import 'package:fue_connect/screens/features/SavedItemsPage.dart';
 import 'package:fue_connect/screens/features/formsPage.dart';
-
+import 'screens/features/settings_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -72,6 +72,7 @@ class MyApp extends StatelessWidget {
         '/calendar': (context) => const AcademicCalendarPage(),
         '/saved': (context) => const SavedItemsPage(),
         '/admin_dashboard': (context) => const AdminDashboardPage(),
+        '/settings': (context) => const SettingsPage(),
         '/forms': (context){
           final data = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>; 
           return FormsPage(data: data);

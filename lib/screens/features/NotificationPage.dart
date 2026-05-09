@@ -24,8 +24,8 @@ class _NotificationPageState extends State<NotificationPage> {
     "Opportunity"
   ];
 
-// reference path used to match notifications for current user
-  String get studentPath => "/Students/${FirebaseAuth.instance.currentUser?.uid}";
+  // reference path used to match notifications for current user
+  String get currentUid => FirebaseAuth.instance.currentUser?.uid ?? "";
 
   @override
   Widget build(BuildContext context) {
@@ -78,8 +78,8 @@ class _NotificationPageState extends State<NotificationPage> {
               stream: FirebaseFirestore.instance
                   .collection('Notifications')
                   .where(
-                    'userRef',
-                    isEqualTo: "/users/${FirebaseAuth.instance.currentUser?.uid}",
+                    'receiverId', // simpler ID match is more reliable than path strings
+                    isEqualTo: currentUid,
                   )
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
@@ -90,18 +90,17 @@ class _NotificationPageState extends State<NotificationPage> {
                   );
                 }
 
-                // filter el notifications ala hasab el category
+                // filter el notifications ala hasab el category localy to save reads
                 final docs = snapshot.data?.docs.where((doc) {
-
                   final data = doc.data() as Map<String, dynamic>;
 
                   String type = (data['notification_type'] ?? "")
                      .toString()
                      .toLowerCase();
-                        String message = 
-                          (data['notification_message']??"")
-                            .toString()
-                            .toLowerCase();
+                  String message = 
+                    (data['notification_message']??"")
+                      .toString()
+                      .toLowerCase();
 
                   bool matchesCategory =
                       _selectedCategory == "All" ||
@@ -136,7 +135,9 @@ class _NotificationPageState extends State<NotificationPage> {
                     var data = doc.data() as Map<String, dynamic>;
                     // check law el notification read to change status
                     bool isRead = data['isRead'] ?? false;
-                    DateTime dt = (data['timestamp'] as Timestamp).toDate();
+                    
+                    // handle server timestamp law lassa null
+                    DateTime dt = (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
 
                     return Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
