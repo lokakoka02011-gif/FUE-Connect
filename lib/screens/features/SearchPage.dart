@@ -3,12 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fue_connect/widgets/loading_indicator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+
 import 'package:fue_connect/screens/features/OpportunitiesPage.dart';
 import 'package:fue_connect/screens/features/ClubsPage.dart';
 import 'package:fue_connect/screens/features/EventsPage.dart';
 import 'package:fue_connect/screens/features/VolunteerPage.dart';
-
-
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -18,12 +17,9 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  final TextEditingController _searchController = TextEditingController();
 
-  final TextEditingController _searchController =
-      TextEditingController();
-
-  final FocusNode _searchFocusNode =
-      FocusNode();
+  final FocusNode _searchFocusNode = FocusNode();
 
   String _searchQuery = "";
   String _selectedCategory = "All";
@@ -37,12 +33,7 @@ class _SearchPageState extends State<SearchPage> {
   bool _isLoading = false;
   bool _isSearchFocused = false;
 
-  final List<String> _categories = [
-    "All",
-    "Clubs",
-    "Events",
-    "Opportunity",
-  ];
+  final List<String> _categories = ["All", "Clubs", "Events", "Opportunity"];
 
   @override
   void initState() {
@@ -54,8 +45,7 @@ class _SearchPageState extends State<SearchPage> {
 
     _searchFocusNode.addListener(() {
       setState(() {
-        _isSearchFocused =
-            _searchFocusNode.hasFocus;
+        _isSearchFocused = _searchFocusNode.hasFocus;
       });
     });
   }
@@ -69,18 +59,13 @@ class _SearchPageState extends State<SearchPage> {
 
   // save & load recently viewed items
   Future<void> _loadRecentlyViewed() async {
+    final prefs = await SharedPreferences.getInstance();
 
-    final prefs =
-        await SharedPreferences.getInstance();
-
-    final String? recentData =
-        prefs.getString('recent_viewed');
+    final String? recentData = prefs.getString('recent_viewed');
 
     if (recentData != null) {
-
       setState(() {
-        _recentlyViewed =
-            List<Map<String, dynamic>>.from(
+        _recentlyViewed = List<Map<String, dynamic>>.from(
           json.decode(recentData),
         );
       });
@@ -89,44 +74,31 @@ class _SearchPageState extends State<SearchPage> {
 
   // load recent searches
   Future<void> _loadRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
 
-    final prefs =
-        await SharedPreferences.getInstance();
-
-    final recentSearches =
-        prefs.getStringList(
-      'recent_search_queries',
-    );
+    final recentSearches = prefs.getStringList('recent_search_queries');
 
     if (recentSearches != null) {
-
       setState(() {
-        _recentSearches =
-            recentSearches;
+        _recentSearches = recentSearches;
       });
     }
   }
 
   // load recommendations
   Future<void> _loadRecommendations() async {
-
-    List<Map<String, dynamic>>
-        recommendations = [];
+    List<Map<String, dynamic>> recommendations = [];
 
     try {
-
-      var eventSnap =
-          await FirebaseFirestore.instance
-              .collection('Events')
-              .limit(2)
-              .get();
+      var eventSnap = await FirebaseFirestore.instance
+          .collection('Events')
+          .limit(2)
+          .get();
 
       for (var doc in eventSnap.docs) {
-
         var data = doc.data();
 
-        data['displayTitle'] =
-            data['name'];
+        data['displayTitle'] = data['name'];
 
         data['origin'] = 'Events';
         data['docId'] = doc.id;
@@ -134,18 +106,15 @@ class _SearchPageState extends State<SearchPage> {
         recommendations.add(data);
       }
 
-      var clubSnap =
-          await FirebaseFirestore.instance
-              .collection('Clubs')
-              .limit(2)
-              .get();
+      var clubSnap = await FirebaseFirestore.instance
+          .collection('Clubs')
+          .limit(2)
+          .get();
 
       for (var doc in clubSnap.docs) {
-
         var data = doc.data();
 
-        data['displayTitle'] =
-            data['name'];
+        data['displayTitle'] = data['name'];
 
         data['origin'] = 'Clubs';
         data['docId'] = doc.id;
@@ -153,50 +122,36 @@ class _SearchPageState extends State<SearchPage> {
         recommendations.add(data);
       }
 
-      var oppSnap =
-          await FirebaseFirestore.instance
-              .collection('Opportunity')
-              .limit(2)
-              .get();
+      var oppSnap = await FirebaseFirestore.instance
+          .collection('Opportunity')
+          .limit(2)
+          .get();
 
       for (var doc in oppSnap.docs) {
-
         var data = doc.data();
 
-        data['displayTitle'] =
-            data['Title'];
+        data['displayTitle'] = data['Title'];
 
-        data['origin'] =
-            'Opportunity';
+        data['origin'] = 'Opportunity';
 
-        data['docId'] =
-            doc.id;
+        data['docId'] = doc.id;
 
         recommendations.add(data);
       }
-
     } catch (e) {
-
-      debugPrint(
-        "Recommendation Error: $e",
-      );
+      debugPrint("Recommendation Error: $e");
     }
 
     setState(() {
-      _recommendedItems =
-          recommendations;
+      _recommendedItems = recommendations;
     });
   }
 
   // save recent search query
-  Future<void> _saveRecentSearch(
-    String query,
-  ) async {
-
+  Future<void> _saveRecentSearch(String query) async {
     if (query.trim().isEmpty) return;
 
-    final prefs =
-        await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
     _recentSearches.remove(query);
 
@@ -206,29 +161,20 @@ class _SearchPageState extends State<SearchPage> {
       _recentSearches.removeLast();
     }
 
-    await prefs.setStringList(
-      'recent_search_queries',
-      _recentSearches,
-    );
+    await prefs.setStringList('recent_search_queries', _recentSearches);
 
     setState(() {});
   }
 
   // add item lel recently viewed
-  Future<void> _addToRecent(
-    Map<String, dynamic> item,
-  ) async {
-
-    final prefs =
-        await SharedPreferences.getInstance();
+  Future<void> _addToRecent(Map<String, dynamic> item) async {
+    final prefs = await SharedPreferences.getInstance();
 
     // Remove duplicates to move the item to the top
     _recentlyViewed.removeWhere(
       (element) =>
-          element['displayTitle'] ==
-              item['displayTitle'] &&
-          element['origin'] ==
-              item['origin'],
+          element['displayTitle'] == item['displayTitle'] &&
+          element['origin'] == item['origin'],
     );
 
     _recentlyViewed.insert(0, item);
@@ -238,21 +184,14 @@ class _SearchPageState extends State<SearchPage> {
       _recentlyViewed.removeLast();
     }
 
-    await prefs.setString(
-      'recent_viewed',
-      json.encode(_recentlyViewed),
-    );
+    await prefs.setString('recent_viewed', json.encode(_recentlyViewed));
 
     setState(() {});
   }
 
   // search fel clubs w events w opportunities
-  void _performSearch(
-    String query,
-  ) async {
-
+  void _performSearch(String query) async {
     if (query.trim().isEmpty) {
-
       setState(() {
         _searchResults = [];
         _searchQuery = "";
@@ -263,46 +202,29 @@ class _SearchPageState extends State<SearchPage> {
 
     setState(() {
       _isLoading = true;
-      _searchQuery =
-          query.toLowerCase();
+      _searchQuery = query.toLowerCase();
     });
 
-    List<Map<String, dynamic>>
-        tempResults = [];
+    List<Map<String, dynamic>> tempResults = [];
 
     try {
-
       // Search clubs
-      if (_selectedCategory ==
-              "All" ||
-          _selectedCategory ==
-              "Clubs") {
-
-        var clubSnap =
-            await FirebaseFirestore.instance
-                .collection('Clubs')
-                .get();
+      if (_selectedCategory == "All" || _selectedCategory == "Clubs") {
+        var clubSnap = await FirebaseFirestore.instance
+            .collection('Clubs')
+            .get();
 
         for (var doc in clubSnap.docs) {
-
           var data = doc.data();
 
-          String name =
-              (data['name'] ?? "")
-                  .toString()
-                  .toLowerCase();
+          String name = (data['name'] ?? "").toString().toLowerCase();
 
-          if (name.contains(
-              _searchQuery)) {
+          if (name.contains(_searchQuery)) {
+            data['displayTitle'] = data['name'];
 
-            data['displayTitle'] =
-                data['name'];
+            data['origin'] = 'Clubs';
 
-            data['origin'] =
-                'Clubs';
-
-            data['docId'] =
-                doc.id;
+            data['docId'] = doc.id;
 
             tempResults.add(data);
           }
@@ -310,36 +232,22 @@ class _SearchPageState extends State<SearchPage> {
       }
 
       // Search events
-      if (_selectedCategory ==
-              "All" ||
-          _selectedCategory ==
-              "Events") {
-
-        var eventSnap =
-            await FirebaseFirestore.instance
-                .collection('Events')
-                .get();
+      if (_selectedCategory == "All" || _selectedCategory == "Events") {
+        var eventSnap = await FirebaseFirestore.instance
+            .collection('Events')
+            .get();
 
         for (var doc in eventSnap.docs) {
-
           var data = doc.data();
 
-          String name =
-              (data['name'] ?? "")
-                  .toString()
-                  .toLowerCase();
+          String name = (data['name'] ?? "").toString().toLowerCase();
 
-          if (name.contains(
-              _searchQuery)) {
+          if (name.contains(_searchQuery)) {
+            data['displayTitle'] = data['name'];
 
-            data['displayTitle'] =
-                data['name'];
+            data['origin'] = 'Events';
 
-            data['origin'] =
-                'Events';
-
-            data['docId'] =
-                doc.id;
+            data['docId'] = doc.id;
 
             tempResults.add(data);
           }
@@ -347,300 +255,180 @@ class _SearchPageState extends State<SearchPage> {
       }
 
       // Search Opportunities
-      if (_selectedCategory ==
-              "All" ||
-          _selectedCategory ==
-              "Opportunity") {
-
-        var oppSnap =
-            await FirebaseFirestore.instance
-                .collection('Opportunity')
-                .get();
+      if (_selectedCategory == "All" || _selectedCategory == "Opportunity") {
+        var oppSnap = await FirebaseFirestore.instance
+            .collection('Opportunity')
+            .get();
 
         for (var doc in oppSnap.docs) {
-
           var data = doc.data();
 
-          String title =
-              (data['Title'] ?? "")
-                  .toString()
-                  .toLowerCase();
+          String title = (data['Title'] ?? "").toString().toLowerCase();
 
-          if (title.contains(
-              _searchQuery)) {
+          if (title.contains(_searchQuery)) {
+            data['displayTitle'] = data['Title'];
 
-            data['displayTitle'] =
-                data['Title'];
+            data['origin'] = 'Opportunity';
 
-            data['origin'] =
-                'Opportunity';
-
-            data['docId'] =
-                doc.id;
+            data['docId'] = doc.id;
 
             tempResults.add(data);
           }
         }
       }
-
     } catch (e) {
-
-      debugPrint(
-        "Search Error: $e",
-      );
+      debugPrint("Search Error: $e");
     }
 
     setState(() {
-      _searchResults =
-          tempResults;
+      _searchResults = tempResults;
 
       _isLoading = false;
     });
   }
-    void _handleNavigation(Map<String, dynamic> item) {
-      _saveRecentSearch(_searchController.text);
 
-      Widget destination;
-      
-      switch (item['origin']) {
-        case 'Clubs':
-          destination = const ClubsPage(); 
-          break;
-        case 'Events':
-          destination = const EventsPage(); 
-          break;
-        case 'Volunteer':
-          destination = const VolunteerPage(); 
-          break;
-        case 'Opportunity':
-        default:
-          destination = const OpportunitiesPage();
-          break;
-      }
+  void _handleNavigation(Map<String, dynamic> item) {
+    _saveRecentSearch(_searchController.text);
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => destination),
-      );
+    Widget destination;
+
+    switch (item['origin']) {
+      case 'Clubs':
+        destination = const ClubsPage();
+        break;
+
+      case 'Events':
+        destination = const EventsPage();
+        break;
+
+      case 'Volunteer':
+        destination = const VolunteerPage();
+        break;
+
+      case 'Opportunity':
+      default:
+        destination = const OpportunitiesPage();
+        break;
     }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => destination),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-
-    const Color fueRed =
-        Color(0xffb1170c);
+    const Color fueRed = Color(0xffb1170c);
 
     return Scaffold(
-
-      backgroundColor:
-          Colors.white,
+      backgroundColor: Colors.white,
 
       appBar: AppBar(
-        title: const Text(
-          "Search FUE Connect",
-        ),
+        title: const Text("Search FUE Connect"),
         elevation: 0,
-        backgroundColor:
-            fueRed,
-        foregroundColor:
-            Colors.white,
+        backgroundColor: fueRed,
+        foregroundColor: Colors.white,
       ),
 
       body: Column(
         children: [
-
           // Header Search Bar
           Container(
+            padding: const EdgeInsets.all(16),
 
-            padding:
-                const EdgeInsets.all(
-              16,
-            ),
-
-            decoration:
-                const BoxDecoration(
+            decoration: const BoxDecoration(
               color: fueRed,
-              borderRadius:
-                  BorderRadius.only(
-                bottomLeft:
-                    Radius.circular(
-                        25),
-                bottomRight:
-                    Radius.circular(
-                        25),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(25),
+                bottomRight: Radius.circular(25),
               ),
             ),
 
             child: Column(
               children: [
-
                 TextField(
+                  controller: _searchController,
 
-                  controller:
-                      _searchController,
+                  focusNode: _searchFocusNode,
 
-                  focusNode:
-                      _searchFocusNode,
+                  onChanged: _performSearch,
 
-                  onChanged:
-                      _performSearch,
+                  onSubmitted: _saveRecentSearch,
 
-                  onSubmitted:
-                      _saveRecentSearch,
+                  style: const TextStyle(color: Colors.white),
 
-                  style:
-                      const TextStyle(
-                    color:
-                        Colors.white,
-                  ),
+                  decoration: InputDecoration(
+                    hintText: "Search clubs, events, or jobs...",
 
-                  decoration:
-                      InputDecoration(
+                    hintStyle: const TextStyle(color: Colors.white70),
 
-                    hintText:
-                        "Search clubs, events, or jobs...",
-
-                    hintStyle:
-                        const TextStyle(
-                      color:
-                          Colors.white70,
-                    ),
-
-                    prefixIcon:
-                        const Icon(
-                      Icons.search,
-                      color:
-                          Colors.white,
-                    ),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white),
 
                     filled: true,
 
-                    fillColor:
-                        Colors.white
-                            .withOpacity(
-                                0.15),
+                    fillColor: Colors.white.withOpacity(0.15),
 
-                    border:
-                        OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(
-                              30),
-                      borderSide:
-                          BorderSide.none,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
                     ),
 
-                    contentPadding:
-                        const EdgeInsets.symmetric(
-                      vertical: 0,
-                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
                   ),
                 ),
 
                 if (_isSearchFocused) ...[
-
-                  const SizedBox(
-                    height: 14,
-                  ),
+                  const SizedBox(height: 14),
 
                   SizedBox(
-
                     height: 38,
 
-                    child:
-                        ListView.separated(
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
 
-                      scrollDirection:
-                          Axis.horizontal,
+                      itemCount: _categories.length,
 
-                      itemCount:
-                          _categories
-                              .length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 10),
 
-                      separatorBuilder:
-                          (
-                        context,
-                        index,
-                      ) =>
-                              const SizedBox(
-                        width: 10,
-                      ),
+                      itemBuilder: (context, index) {
+                        final category = _categories[index];
 
-                      itemBuilder:
-                          (
-                        context,
-                        index,
-                      ) {
-
-                        final category =
-                            _categories[
-                                index];
-
-                        final isSelected =
-                            _selectedCategory ==
-                                category;
+                        final isSelected = _selectedCategory == category;
 
                         return GestureDetector(
-
                           onTap: () {
-
                             setState(() {
-                              _selectedCategory =
-                                  category;
+                              _selectedCategory = category;
                             });
 
-                            if (_searchQuery
-                                .isNotEmpty) {
-
-                              _performSearch(
-                                _searchController
-                                    .text,
-                              );
+                            if (_searchQuery.isNotEmpty) {
+                              _performSearch(_searchController.text);
                             }
                           },
 
                           child: Container(
-
-                            padding:
-                                const EdgeInsets.symmetric(
-                              horizontal:
-                                  16,
-                              vertical:
-                                  8,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
                             ),
 
-                            decoration:
-                                BoxDecoration(
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.15),
 
-                              color:
-                                  isSelected
-                                      ? Colors
-                                          .white
-                                      : Colors
-                                          .white
-                                          .withOpacity(
-                                              0.15),
-
-                              borderRadius:
-                                  BorderRadius.circular(
-                                      20),
+                              borderRadius: BorderRadius.circular(20),
                             ),
 
                             child: Text(
-
                               category,
 
-                              style:
-                                  TextStyle(
+                              style: TextStyle(
+                                color: isSelected ? fueRed : Colors.white,
 
-                                color:
-                                    isSelected
-                                        ? fueRed
-                                        : Colors
-                                            .white,
-
-                                fontWeight:
-                                    FontWeight
-                                        .bold,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
@@ -654,53 +442,25 @@ class _SearchPageState extends State<SearchPage> {
           ),
 
           Expanded(
-
             child: _isLoading
+                ? const Center(child: LoadingIndicator(color: fueRed))
+                : _searchQuery.isEmpty
+                ? _buildEmptyState()
+                : _searchResults.isEmpty
+                ? _buildNoResultsState()
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
 
-                ? const Center(
-                    child:
-                        LoadingIndicator(
-                      color:
-                          fueRed,
-                    ),
-                  )
+                    itemCount: _searchResults.length,
 
-                : _searchQuery
-                        .isEmpty
-
-                    ? _buildEmptyState()
-
-                    : _searchResults
-                            .isEmpty
-
-                        ? _buildNoResultsState()
-
-                        : ListView.builder(
-
-                            padding:
-                                const EdgeInsets.all(
-                                    16),
-
-                            itemCount:
-                                _searchResults
-                                    .length,
-
-                            itemBuilder:
-                                (
-                              context,
-                              index,
-                            ) =>
-                                    _buildResultTile(
-                              _searchResults[
-                                  index],
-                            ),
-                          ),
+                    itemBuilder: (context, index) =>
+                        _buildResultTile(_searchResults[index]),
+                  ),
           ),
         ],
       ),
     );
   }
-
 
   Widget _buildEmptyState() {
     // If the user clicked the search bar show search history
@@ -710,127 +470,92 @@ class _SearchPageState extends State<SearchPage> {
           if (_recentSearches.isNotEmpty) ...[
             const Padding(
               padding: EdgeInsets.all(20),
-              child: Text("Search History", style: TextStyle(fontWeight: FontWeight.bold)),
+
+              child: Text(
+                "Search History",
+
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
-            ..._recentSearches.map((search) => ListTile(
-              leading: const Icon(Icons.history),
-              title: Text(search),
-              onTap: () {
-                _searchController.text = search;
-                _performSearch(search);
-              },
-            )),
+
+            ..._recentSearches.map(
+              (search) => ListTile(
+                leading: const Icon(Icons.history),
+
+                title: Text(search),
+
+                onTap: () {
+                  _searchController.text = search;
+
+                  _performSearch(search);
+                },
+              ),
+            ),
           ] else ...[
-            // Optional: Show a "Start typing to search" hint here
-            const Center(child: Padding(
-              padding: EdgeInsets.only(top: 40),
-              child: Text("Type to find clubs, events, or jobs"),
-            )),
-          ]
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.only(top: 40),
+
+                child: Text("Type to find clubs, events, or jobs"),
+              ),
+            ),
+          ],
         ],
       );
     }
 
     return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildRecommendedSection(), 
-        ],
-      ),
+      child: Column(children: [_buildRecommendedSection()]),
     );
   }
 
-  Widget _buildResultTile(
-    Map<String, dynamic> item, {
-    bool isRecent = false,
-  }) {
-
+  Widget _buildResultTile(Map<String, dynamic> item, {bool isRecent = false}) {
     Color originColor;
     IconData icon;
 
     switch (item['origin']) {
-
       case 'Clubs':
-        originColor =
-            Colors.blue;
-        icon =
-            Icons.groups;
+        originColor = Colors.blue;
+        icon = Icons.groups;
         break;
 
       case 'Events':
-        originColor =
-            Colors.orange;
-        icon =
-            Icons.event;
+        originColor = Colors.orange;
+        icon = Icons.event;
         break;
 
       default:
-        originColor =
-            Colors.green;
-        icon =
-            Icons.work;
+        originColor = Colors.green;
+        icon = Icons.work;
     }
 
     return ListTile(
-
       leading: Icon(
+        isRecent ? Icons.history : icon,
 
-        isRecent
-            ? Icons.history
-            : icon,
-
-        color: isRecent
-            ? Colors.grey
-            : originColor,
+        color: isRecent ? Colors.grey : originColor,
       ),
 
       title: Text(
+        item['displayTitle'] ?? "Untitled",
 
-        item['displayTitle'] ??
-            "Untitled",
-
-        style:
-            const TextStyle(
-          fontWeight:
-              FontWeight.w500,
-        ),
+        style: const TextStyle(fontWeight: FontWeight.w500),
       ),
 
       subtitle: Text(
-
         item['origin'],
 
-        style: TextStyle(
-          color:
-              originColor,
-          fontSize: 12,
-        ),
+        style: TextStyle(color: originColor, fontSize: 12),
       ),
 
-      trailing: const Icon(
-        Icons.chevron_right,
-        size: 18,
-      ),
+      trailing: const Icon(Icons.chevron_right, size: 18),
 
       onTap: () {
-
         _addToRecent(item);
 
-        _saveRecentSearch(
-          _searchController
-              .text,
-        );
+        _saveRecentSearch(_searchController.text);
 
-        if (item['origin'] ==
-            'Opportunity') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    const OpportunitiesPage(),
-              ),
-            );
-        }
+        _handleNavigation(item);
       },
     );
   }
@@ -841,187 +566,120 @@ class _SearchPageState extends State<SearchPage> {
     required Color color,
     required IconData icon,
   }) {
-
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
 
-      margin:
-          const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.all(16),
 
-      padding:
-          const EdgeInsets.all(
-              16),
-
-      decoration:
-          BoxDecoration(
-
+      decoration: BoxDecoration(
         color: Colors.white,
 
-        borderRadius:
-            BorderRadius.circular(
-                15),
+        borderRadius: BorderRadius.circular(15),
 
         boxShadow: [
-
           BoxShadow(
-            color: Colors.black
-                .withOpacity(
-                    0.05),
+            color: Colors.black.withOpacity(0.05),
 
             blurRadius: 10,
 
-            offset:
-                const Offset(
-                    0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
 
       child: Row(
         children: [
-
           Container(
+            padding: const EdgeInsets.all(10),
 
-            padding:
-                const EdgeInsets.all(
-                    10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
 
-            decoration:
-                BoxDecoration(
-
-              color: color
-                  .withOpacity(
-                      0.1),
-
-              borderRadius:
-                  BorderRadius.circular(
-                      10),
+              borderRadius: BorderRadius.circular(10),
             ),
 
-            child: Icon(
-              icon,
-              color:
-                  color,
-            ),
+            child: Icon(icon, color: color),
           ),
 
-          const SizedBox(
-              width: 15),
+          const SizedBox(width: 15),
 
           Expanded(
-
             child: Column(
-
-              crossAxisAlignment:
-                  CrossAxisAlignment
-                      .start,
+              crossAxisAlignment: CrossAxisAlignment.start,
 
               children: [
-
                 Text(
+                  category.toUpperCase(),
 
-                  category
-                      .toUpperCase(),
+                  style: TextStyle(
+                    color: color,
 
-                  style:
-                      TextStyle(
+                    fontSize: 10,
 
-                    color:
-                        color,
+                    fontWeight: FontWeight.bold,
 
-                    fontSize:
-                        10,
-
-                    fontWeight:
-                        FontWeight
-                            .bold,
-
-                    letterSpacing:
-                        1.1,
+                    letterSpacing: 1.1,
                   ),
                 ),
 
-                const SizedBox(
-                    height: 2),
+                const SizedBox(height: 2),
 
                 Text(
-
                   title,
 
-                  style:
-                      const TextStyle(
-                    fontWeight:
-                        FontWeight
-                            .bold,
-                    fontSize:
-                        15,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
                   ),
                 ),
               ],
             ),
           ),
 
-          const Icon(
-            Icons
-                .arrow_forward_ios,
-            size: 12,
-            color:
-                Colors.grey,
-          ),
+          const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
         ],
       ),
     );
   }
+
   Widget _buildRecommendedSection() {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (_recentlyViewed.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-              child: Text("Recently Viewed", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+
+      children: [
+        if (_recentlyViewed.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
+
+            child: Text(
+              "Recently Viewed",
+
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            ..._recentlyViewed.map((item) => _buildResultTile(item, isRecent: true)),
-          ],
-          // ... rest of the code I provided previously ...
-        ],
-      );
-    }
-
-  Widget _buildNoResultsState() {
-
-    return Center(
-
-      child: Column(
-
-        mainAxisAlignment:
-            MainAxisAlignment
-                .center,
-
-        children: [
-
-          Icon(
-            Icons
-                .search_off_rounded,
-            size: 60,
-            color:
-                Colors.grey[300],
           ),
 
-          const SizedBox(
-              height: 16),
+          ..._recentlyViewed.map(
+            (item) => _buildResultTile(item, isRecent: true),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildNoResultsState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+
+        children: [
+          Icon(Icons.search_off_rounded, size: 60, color: Colors.grey[300]),
+
+          const SizedBox(height: 16),
 
           Text(
-
             "No matches for '$_searchQuery'",
 
-            style:
-                const TextStyle(
-              color:
-                  Colors.grey,
-            ),
+            style: const TextStyle(color: Colors.grey),
           ),
         ],
       ),

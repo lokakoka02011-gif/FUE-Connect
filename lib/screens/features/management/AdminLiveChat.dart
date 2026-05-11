@@ -1,60 +1,162 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// --- MAIN CHAT LIST (WhatsApp Style) ---
+// ==============================
+// ADMIN LIVE CHAT
+// ==============================
+
 class AdminLiveChat extends StatelessWidget {
   const AdminLiveChat({super.key});
 
   @override
   Widget build(BuildContext context) {
+    const Color fueRed = Color(0xffb1170c);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Student Inquiries', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.red[700],
+        title: const Text('Live Chat', style: TextStyle(color: Colors.white)),
+
+        backgroundColor: fueRed,
+
+        foregroundColor: Colors.white,
       ),
+
       body: StreamBuilder<QuerySnapshot>(
-        // STEP 1: Using "support_chats" and ordering by "lastMessageTime"
         stream: FirebaseFirestore.instance
             .collection('support_chats')
             .orderBy('lastMessageTime', descending: true)
             .snapshots(),
+
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+          // LOADING
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          var chatDocs = snapshot.data!.docs;
-            if (chatDocs.isEmpty) {
-              return const Center(
-                child: Text(
-                  "No student inquiries yet",
-                  style: TextStyle(fontSize: 16),
+          // ERROR
+          if (snapshot.hasError) {
+            return const Center(child: Text("Something went wrong"));
+          }
+
+          final chatDocs = snapshot.data?.docs ?? [];
+
+          // EMPTY STATE
+          if (chatDocs.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+
+                        shape: BoxShape.circle,
+                      ),
+
+                      child: const Icon(
+                        Icons.chat_bubble_outline,
+
+                        size: 60,
+
+                        color: Colors.grey,
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    const Text(
+                      "No Live Chats Yet",
+
+                      style: TextStyle(
+                        fontSize: 22,
+
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Text(
+                      "When students contact support,\nconversations will appear here.",
+
+                      textAlign: TextAlign.center,
+
+                      style: TextStyle(color: Colors.grey[600], fontSize: 15),
+                    ),
+                  ],
                 ),
-              );
-            }
+              ),
+            );
+          }
 
+          // CHAT LIST
           return ListView.separated(
             itemCount: chatDocs.length,
-            separatorBuilder: (context, index) => Divider(height: 1),
+
+            separatorBuilder: (context, index) {
+              return const Divider(height: 1);
+            },
+
             itemBuilder: (context, index) {
-              var data = chatDocs[index].data() as Map<String, dynamic>;
-              
+              final data = chatDocs[index].data() as Map<String, dynamic>;
+
+              final studentRef = (data['userRef'] ?? 'Unknown Student')
+                  .toString();
+
+              final lastMessage = data['lastMessage'] ?? 'No messages yet';
+
               return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.red, 
-                  child: Icon(Icons.person, color: Colors.white)
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
                 ),
-                // Displaying student email from 'userRef'
-                title: Text((data['userRef'] ?? 'Unknown Student').toString(),
-                style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(data['lastMessage'] ?? 'No messages yet', maxLines: 1),
-                trailing: Icon(Icons.chevron_right, color: Colors.red),
+
+                leading: CircleAvatar(
+                  radius: 25,
+
+                  backgroundColor: fueRed,
+
+                  child: const Icon(Icons.person, color: Colors.white),
+                ),
+
+                title: Text(
+                  studentRef,
+
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+
+                  child: Text(
+                    lastMessage,
+
+                    maxLines: 1,
+
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+
+                trailing: const Icon(Icons.chevron_right, color: fueRed),
+
                 onTap: () {
                   Navigator.push(
                     context,
+
                     MaterialPageRoute(
-                      builder: (context) => AdminChatDetail(
-                        chatId: chatDocs[index].id,
-                        studentEmail: data['userRef'] ?? 'Unknown Student',
-                      ),
+                      builder: (context) {
+                        return AdminChatDetail(
+                          chatId: chatDocs[index].id,
+
+                          studentEmail: studentRef,
+                        );
+                      },
                     ),
                   );
                 },
@@ -67,58 +169,87 @@ class AdminLiveChat extends StatelessWidget {
   }
 }
 
-// --- CHAT DETAIL SCREEN ---
+// ==============================
+// CHAT DETAIL
+// ==============================
+
 class AdminChatDetail extends StatefulWidget {
   final String chatId;
   final String studentEmail;
 
   const AdminChatDetail({
     super.key,
+
     required this.chatId,
+
     required this.studentEmail,
   });
+
   @override
-  _AdminChatDetailState createState() => _AdminChatDetailState();
+  State<AdminChatDetail> createState() => _AdminChatDetailState();
 }
 
 class _AdminChatDetailState extends State<AdminChatDetail> {
   final TextEditingController _messageController = TextEditingController();
 
-  void _sendAdminReply() async {
-    if (_messageController.text.trim().isEmpty) return;
-    
-    String msg = _messageController.text.trim();
+  // SEND MESSAGE
+  Future<void> _sendAdminReply() async {
+    if (_messageController.text.trim().isEmpty) {
+      return;
+    }
+
+    final msg = _messageController.text.trim();
+
     _messageController.clear();
 
-    // STEP 2 & 4: Save message in subcollection "messages"
+    // SAVE MESSAGE
     await FirebaseFirestore.instance
         .collection('support_chats')
         .doc(widget.chatId)
         .collection('messages')
         .add({
-      'senderRole': 'admin', 
-      'senderRef': 'admin_account_id', // TODO: Team Leader - replace with actual admin ID
-      'message': msg,
-      'createdAt': FieldValue.serverTimestamp(),
-      'isRead': false,
-    });
+          'senderRole': 'admin',
 
-    // STEP 4: Update the parent document for the "WhatsApp List" preview
-    await FirebaseFirestore.instance.collection('support_chats').doc(widget.chatId).update({
-      'lastMessage': msg,
-      'lastMessageTime': FieldValue.serverTimestamp(),
-    });
+          'senderRef': 'admin_account_id',
+
+          'message': msg,
+
+          'createdAt': FieldValue.serverTimestamp(),
+
+          'isRead': false,
+        });
+
+    // UPDATE PREVIEW
+    await FirebaseFirestore.instance
+        .collection('support_chats')
+        .doc(widget.chatId)
+        .update({
+          'lastMessage': msg,
+
+          'lastMessageTime': FieldValue.serverTimestamp(),
+        });
   }
 
   @override
   Widget build(BuildContext context) {
+    const Color fueRed = Color(0xffb1170c);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.studentEmail, style: TextStyle(color: Colors.white, fontSize: 16)),
-        backgroundColor: Colors.red[700],
+        title: Text(
+          widget.studentEmail,
+
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+        ),
+
+        backgroundColor: fueRed,
+
+        foregroundColor: Colors.white,
       ),
+
       body: Column(
         children: [
+          // MESSAGES
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -127,27 +258,86 @@ class _AdminChatDetailState extends State<AdminChatDetail> {
                   .collection('messages')
                   .orderBy('createdAt', descending: true)
                   .snapshots(),
+
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+                // LOADING
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                // EMPTY CHAT
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+
+                      children: [
+                        Icon(
+                          Icons.forum_outlined,
+
+                          size: 60,
+
+                          color: Colors.grey[400],
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        Text(
+                          "No messages yet",
+
+                          style: TextStyle(
+                            color: Colors.grey[600],
+
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                // MESSAGES LIST
                 return ListView.builder(
                   reverse: true,
-                  padding: EdgeInsets.all(12),
+
+                  padding: const EdgeInsets.all(12),
+
                   itemCount: snapshot.data!.docs.length,
+
                   itemBuilder: (context, index) {
-                    var data = snapshot.data!.docs[index];
-                    bool isAdmin = data['senderRole'] == 'admin';
+                    final data = snapshot.data!.docs[index];
+
+                    final isAdmin = data['senderRole'] == 'admin';
+
                     return Align(
-                      alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: isAdmin
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+
                       child: Container(
-                        margin: EdgeInsets.symmetric(vertical: 4),
-                        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 14,
+                        ),
+
+                        constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.75,
+                        ),
+
                         decoration: BoxDecoration(
-                          color: isAdmin ? Colors.red[700] : Colors.grey[200],
+                          color: isAdmin ? fueRed : Colors.grey[200],
+
                           borderRadius: BorderRadius.circular(15),
                         ),
+
                         child: Text(
-                          data['message'].toString(), 
-                          style: TextStyle(color: isAdmin ? Colors.white : Colors.black)
+                          data['message'].toString(),
+
+                          style: TextStyle(
+                            color: isAdmin ? Colors.white : Colors.black,
+                          ),
                         ),
                       ),
                     );
@@ -156,19 +346,36 @@ class _AdminChatDetailState extends State<AdminChatDetail> {
               },
             ),
           ),
-          // Input Field area
+
+          // INPUT AREA
           Container(
-            padding: EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey[300]!))),
+            padding: const EdgeInsets.all(8),
+
+            decoration: BoxDecoration(
+              color: Colors.white,
+
+              border: Border(top: BorderSide(color: Colors.grey[300]!)),
+            ),
+
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _messageController,
-                    decoration: InputDecoration(hintText: "Reply to student...", border: InputBorder.none),
+
+                    decoration: const InputDecoration(
+                      hintText: "Reply to student...",
+
+                      border: InputBorder.none,
+                    ),
                   ),
                 ),
-                IconButton(icon: Icon(Icons.send, color: Colors.red), onPressed: _sendAdminReply),
+
+                IconButton(
+                  icon: const Icon(Icons.send, color: fueRed),
+
+                  onPressed: _sendAdminReply,
+                ),
               ],
             ),
           ),

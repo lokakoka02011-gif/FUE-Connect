@@ -25,16 +25,14 @@ class _AdminDashboardPageState
   int volunteeringCount = 0;
   int postsCount = 0;
   int unreadChatsCount = 0;
-  int pendingCompaniesCount = 0;
-  int pendingOpportunitiesCount = 0;
+  int companiesCount = 0;
 
-  // logout
+  // LOGOUT
   void _handleLogout(
     BuildContext context,
   ) async {
 
-    final authService =
-        AuthService();
+    final authService = AuthService();
 
     await authService.signOut();
 
@@ -45,11 +43,17 @@ class _AdminDashboardPageState
     );
   }
 
+  // LOAD COUNTS
   Future<void> _loadCounts() async {
 
+    // STUDENTS ONLY
     final students =
         await FirebaseFirestore.instance
             .collection('users')
+            .where(
+              'role',
+              isEqualTo: 'student',
+            )
             .get();
 
     final clubs =
@@ -67,52 +71,35 @@ class _AdminDashboardPageState
             .collection('opportunities')
             .get();
 
-    final pendingOpportunities =
-        await FirebaseFirestore.instance
-            .collection('opportunities')
-
-            .where(
-              'status',
-              isEqualTo: 'pending',
-            )
-
-            .get();
-
     final volunteering =
         await FirebaseFirestore.instance
             .collection('volunteering')
             .get();
 
+    // FIXED POSTS COLLECTION
     final posts =
         await FirebaseFirestore.instance
-            .collection('club_posts')
+            .collection('posts')
             .get();
 
-    final pendingCompanies =
+    // ALL COMPANIES
+    final companies =
         await FirebaseFirestore.instance
             .collection('users')
-
             .where(
               'role',
               isEqualTo: 'company',
             )
-
-            .where(
-              'approvalStatus',
-              isEqualTo: 'pending',
-            )
-
             .get();
 
+    // FIXED CHAT COLLECTION
     final unreadChats =
         await FirebaseFirestore.instance
-            .collection('support_chats')
-
+            .collection('messages')
             .where(
               'isReadByAdmin',
               isEqualTo: false,
             )
-
             .get();
 
     setState(() {
@@ -129,17 +116,14 @@ class _AdminDashboardPageState
       opportunitiesCount =
           opportunities.docs.length;
 
-      pendingOpportunitiesCount =
-          pendingOpportunities.docs.length;
-
       volunteeringCount =
           volunteering.docs.length;
 
       postsCount =
           posts.docs.length;
 
-      pendingCompaniesCount =
-          pendingCompanies.docs.length;
+      companiesCount =
+          companies.docs.length;
 
       unreadChatsCount =
           unreadChats.docs.length;
@@ -165,17 +149,40 @@ class _AdminDashboardPageState
 
       appBar: AppBar(
 
+        backgroundColor: fueRed,
+
+        elevation: 0,
+
+        // LIVE CHAT BUTTON
+        leading: IconButton(
+
+          icon: const Icon(
+            Icons.chat,
+            color: Colors.white,
+          ),
+
+          onPressed: () {
+
+            Navigator.push(
+
+              context,
+
+              MaterialPageRoute(
+                builder: (_) =>
+                    const AdminLiveChat(),
+              ),
+            );
+          },
+        ),
+
         title: const Text(
+
           "Admin Dashboard",
 
           style: TextStyle(
             color: Colors.white,
           ),
         ),
-
-        backgroundColor: fueRed,
-
-        elevation: 0,
 
         actions: [
 
@@ -229,29 +236,23 @@ class _AdminDashboardPageState
 
               child: Container(
 
-                height: 320,
+                height: 300,
 
                 padding:
-                    const EdgeInsets.all(
-                  20,
-                ),
+                    const EdgeInsets.all(20),
 
                 decoration: BoxDecoration(
 
                   color: Colors.white,
 
                   borderRadius:
-                      BorderRadius.circular(
-                    20,
-                  ),
+                      BorderRadius.circular(20),
 
                   boxShadow: [
 
                     BoxShadow(
                       color: Colors.black
-                          .withOpacity(
-                        0.05,
-                      ),
+                          .withOpacity(0.05),
 
                       blurRadius: 10,
                     ),
@@ -268,10 +269,9 @@ class _AdminDashboardPageState
                               clubsCount,
                               eventsCount,
                               opportunitiesCount,
-                              pendingOpportunitiesCount,
                               volunteeringCount,
                               postsCount,
-                              pendingCompaniesCount,
+                              companiesCount,
                               unreadChatsCount,
                             ]
                             .reduce(
@@ -280,33 +280,25 @@ class _AdminDashboardPageState
                                       ? a
                                       : b,
                             )
-                            .toDouble() +
-                        5,
+                            .toDouble() + 5,
 
                     borderData:
-                        FlBorderData(
-                      show: false,
-                    ),
+                        FlBorderData(show: false),
 
                     gridData: FlGridData(
 
                       show: true,
 
-                      drawVerticalLine:
-                          false,
+                      drawVerticalLine: false,
 
-                      horizontalInterval:
-                          2,
+                      horizontalInterval: 2,
 
                       getDrawingHorizontalLine:
                           (value) {
 
                         return FlLine(
                           color: Colors.grey
-                              .withOpacity(
-                            0.12,
-                          ),
-
+                              .withOpacity(0.12),
                           strokeWidth: 1,
                         );
                       },
@@ -323,18 +315,15 @@ class _AdminDashboardPageState
 
                           showTitles: true,
 
-                          reservedSize:
-                              28,
+                          reservedSize: 28,
 
                           interval: 2,
 
                           getTitlesWidget:
-                              (
-                            value,
-                            meta,
-                          ) {
+                              (value, meta) {
 
                             return Text(
+
                               value
                                   .toInt()
                                   .toString(),
@@ -342,8 +331,7 @@ class _AdminDashboardPageState
                               style:
                                   const TextStyle(
                                 fontSize: 11,
-                                color:
-                                    Colors.grey,
+                                color: Colors.grey,
                               ),
                             );
                           },
@@ -354,8 +342,7 @@ class _AdminDashboardPageState
                           AxisTitles(
                         sideTitles:
                             SideTitles(
-                          showTitles:
-                              false,
+                          showTitles: false,
                         ),
                       ),
 
@@ -363,8 +350,7 @@ class _AdminDashboardPageState
                           AxisTitles(
                         sideTitles:
                             SideTitles(
-                          showTitles:
-                              false,
+                          showTitles: false,
                         ),
                       ),
 
@@ -374,25 +360,19 @@ class _AdminDashboardPageState
                         sideTitles:
                             SideTitles(
 
-                          showTitles:
-                              true,
+                          showTitles: true,
 
-                          reservedSize:
-                              30,
+                          reservedSize: 30,
 
                           getTitlesWidget:
-                              (
-                            value,
-                            meta,
-                          ) {
+                              (value, meta) {
 
                             switch (
-                                value
-                                    .toInt()) {
+                                value.toInt()) {
 
                               case 0:
                                 return const Text(
-                                  "Users",
+                                  "Students",
                                   style: TextStyle(
                                     fontSize: 10,
                                   ),
@@ -424,7 +404,7 @@ class _AdminDashboardPageState
 
                               case 4:
                                 return const Text(
-                                  "Pending",
+                                  "Volunteer",
                                   style: TextStyle(
                                     fontSize: 10,
                                   ),
@@ -432,7 +412,7 @@ class _AdminDashboardPageState
 
                               case 5:
                                 return const Text(
-                                  "Volunteer",
+                                  "Posts",
                                   style: TextStyle(
                                     fontSize: 10,
                                   ),
@@ -440,21 +420,13 @@ class _AdminDashboardPageState
 
                               case 6:
                                 return const Text(
-                                  "Posts",
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                  ),
-                                );
-
-                              case 7:
-                                return const Text(
                                   "Companies",
                                   style: TextStyle(
                                     fontSize: 10,
                                   ),
                                 );
 
-                              case 8:
+                              case 7:
                                 return const Text(
                                   "Chats",
                                   style: TextStyle(
@@ -474,8 +446,7 @@ class _AdminDashboardPageState
 
                       _barGroup(
                         0,
-                        studentsCount
-                            .toDouble(),
+                        studentsCount.toDouble(),
                         fueRed,
                       ),
 
@@ -493,42 +464,31 @@ class _AdminDashboardPageState
 
                       _barGroup(
                         3,
-                        opportunitiesCount
-                            .toDouble(),
+                        opportunitiesCount.toDouble(),
                         Colors.orange,
                       ),
 
                       _barGroup(
                         4,
-                        pendingOpportunitiesCount
-                            .toDouble(),
-                        Colors.deepOrange,
-                      ),
-
-                      _barGroup(
-                        5,
-                        volunteeringCount
-                            .toDouble(),
+                        volunteeringCount.toDouble(),
                         Colors.purple,
                       ),
 
                       _barGroup(
-                        6,
+                        5,
                         postsCount.toDouble(),
                         Colors.teal,
                       ),
 
                       _barGroup(
-                        7,
-                        pendingCompaniesCount
-                            .toDouble(),
+                        6,
+                        companiesCount.toDouble(),
                         Colors.red,
                       ),
 
                       _barGroup(
-                        8,
-                        unreadChatsCount
-                            .toDouble(),
+                        7,
+                        unreadChatsCount.toDouble(),
                         Colors.indigo,
                       ),
                     ],
@@ -583,6 +543,7 @@ class _AdminDashboardPageState
 
                 children: [
 
+                  // STUDENTS
                   _dashboardCard(
 
                     context,
@@ -595,9 +556,26 @@ class _AdminDashboardPageState
 
                     fueRed,
 
-                    () {},
+                    () {
+
+                      Navigator.push(
+
+                        context,
+
+                        MaterialPageRoute(
+
+                          builder: (_) =>
+                              ManageItemsPage(
+                            title: "Students",
+                            collectionPath:
+                                "users",
+                          ),
+                        ),
+                      );
+                    },
                   ),
 
+                  // CLUBS
                   _dashboardCard(
 
                     context,
@@ -629,6 +607,7 @@ class _AdminDashboardPageState
                     },
                   ),
 
+                  // EVENTS
                   _dashboardCard(
 
                     context,
@@ -660,6 +639,7 @@ class _AdminDashboardPageState
                     },
                   ),
 
+                  // OPPORTUNITIES
                   _dashboardCard(
 
                     context,
@@ -684,7 +664,8 @@ class _AdminDashboardPageState
                           builder: (_) =>
                               ManageItemsPage(
                             title: "Opportunities",
-                            collectionPath:  "opportunities",
+                            collectionPath:
+                                "opportunities",
                             isAdmin: true,
                           ),
                         ),
@@ -692,38 +673,7 @@ class _AdminDashboardPageState
                     },
                   ),
 
-                  _dashboardCard(
-
-                    context,
-
-                    "Pending Jobs",
-
-                    pendingOpportunitiesCount
-                        .toString(),
-
-                    Icons.pending_actions,
-
-                    Colors.deepOrange,
-
-                    () {
-
-                      Navigator.push(
-
-                        context,
-
-                        MaterialPageRoute(
-
-                          builder: (_) =>
-                              ManageItemsPage(
-                            title: "Pending Opportunities",
-                            collectionPath: "opportunities",
-                            isAdmin: true,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
+                  // VOLUNTEERING
                   _dashboardCard(
 
                     context,
@@ -733,8 +683,7 @@ class _AdminDashboardPageState
                     volunteeringCount
                         .toString(),
 
-                    Icons
-                        .volunteer_activism,
+                    Icons.volunteer_activism,
 
                     Colors.purple,
 
@@ -748,16 +697,17 @@ class _AdminDashboardPageState
 
                           builder: (_) =>
                               ManageItemsPage(
-
-                            title: "Volunteering",
-
-                            collectionPath: "volunteering",
+                            title:
+                                "Volunteering",
+                            collectionPath:
+                                "volunteering",
                           ),
                         ),
                       );
                     },
                   ),
 
+                  // POSTS
                   _dashboardCard(
 
                     context,
@@ -781,21 +731,22 @@ class _AdminDashboardPageState
                           builder: (_) =>
                               ManageItemsPage(
                             title: "Posts",
-                            collectionPath: "club_posts",
+                            collectionPath:
+                                "posts",
                           ),
                         ),
                       );
                     },
                   ),
 
+                  // COMPANIES
                   _dashboardCard(
 
                     context,
 
                     "Companies",
 
-                    pendingCompaniesCount
-                        .toString(),
+                    companiesCount.toString(),
 
                     Icons.business,
 
@@ -815,46 +766,30 @@ class _AdminDashboardPageState
                       );
                     },
                   ),
+
+                  // SUBSCRIPTIONS
                   _dashboardCard(
+
                     context,
+
                     "Subscriptions",
+
                     "",
+
                     Icons.workspace_premium,
+
                     Colors.amber,
+
                     () {
+
                       Navigator.push(
+
                         context,
+
                         MaterialPageRoute(
+
                           builder: (_) =>
                               const ManageSubscriptionsPage(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  _dashboardCard(
-
-                    context,
-
-                    "Live Chat",
-
-                    unreadChatsCount
-                        .toString(),
-
-                    Icons.chat,
-
-                    Colors.indigo,
-
-                    () {
-
-                      Navigator.push(
-
-                        context,
-
-                        MaterialPageRoute(
-
-                          builder: (_) =>
-                              const AdminLiveChat(),
                         ),
                       );
                     },
@@ -891,9 +826,7 @@ class _AdminDashboardPageState
           color: color,
 
           borderRadius:
-              BorderRadius.circular(
-            8,
-          ),
+              BorderRadius.circular(8),
         ),
       ],
     );
@@ -935,7 +868,6 @@ class _AdminDashboardPageState
             BoxShadow(
               color: Colors.black
                   .withOpacity(0.05),
-
               blurRadius: 10,
             ),
           ],
@@ -953,19 +885,14 @@ class _AdminDashboardPageState
               decoration: BoxDecoration(
 
                 color:
-                    color.withOpacity(
-                  0.12,
-                ),
+                    color.withOpacity(0.12),
 
                 shape: BoxShape.circle,
               ),
 
               child: Icon(
-
                 icon,
-
                 size: 22,
-
                 color: color,
               ),
             ),
@@ -977,12 +904,10 @@ class _AdminDashboardPageState
               child: Column(
 
                 mainAxisAlignment:
-                    MainAxisAlignment
-                        .center,
+                    MainAxisAlignment.center,
 
                 crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
+                    CrossAxisAlignment.start,
 
                 children: [
 
@@ -991,8 +916,7 @@ class _AdminDashboardPageState
                     value,
 
                     overflow:
-                        TextOverflow
-                            .ellipsis,
+                        TextOverflow.ellipsis,
 
                     style:
                         const TextStyle(
@@ -1011,8 +935,7 @@ class _AdminDashboardPageState
                     title,
 
                     overflow:
-                        TextOverflow
-                            .ellipsis,
+                        TextOverflow.ellipsis,
 
                     style:
                         const TextStyle(

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:fue_connect/screens/features/management/AddItemsPage.dart';
 import 'package:fue_connect/widgets/loading_indicator.dart';
+import 'package:fue_connect/widgets/filter_pills.dart';
 
 class ManageItemsPage extends StatefulWidget {
-
   final String title;
   final bool isAdmin;
   final String collectionPath;
@@ -13,142 +14,99 @@ class ManageItemsPage extends StatefulWidget {
     super.key,
     required this.title,
     required this.collectionPath,
-    this.isAdmin = false
+    this.isAdmin = false,
   });
 
   @override
-  State<ManageItemsPage> createState() =>
-      _ManageItemsPageState();
+  State<ManageItemsPage> createState() => _ManageItemsPageState();
 }
 
-class _ManageItemsPageState
-    extends State<ManageItemsPage> {
+class _ManageItemsPageState extends State<ManageItemsPage> {
+  // COLLECTION TYPES
+  bool get isOpportunities => widget.collectionPath == "opportunities";
 
-  bool get isOpportunities =>
-      widget.collectionPath ==
-      "opportunities";
+  bool get isUsers => widget.collectionPath == "users";
 
-  Future<void> deleteItem (
-    String docId,
-  ) async {
+  bool get isPosts => widget.collectionPath == "posts";
 
-    bool confirm =
-        await _showDeleteDialog();
+  bool get isClubs => widget.collectionPath == "Clubs";
 
-  if (confirm) {
+  bool get isEvents => widget.collectionPath == "Events";
 
-      await FirebaseFirestore
-          .instance
-          .collection(
-            widget.collectionPath,
-          )
-          .doc(docId)
-          .delete();
+  bool get isVolunteering => widget.collectionPath == "volunteering";
 
-      if (mounted) {
+  // FILTER
+  String selectedFilter = "all";
 
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
+  // DELETE ITEM
+  Future<void> deleteItem(String docId) async {
+    final confirm = await _showDeleteDialog();
 
-          const SnackBar(
-            content: Text(
-              "Item deleted successfully",
-            ),
-          ),
-        );
-      }
-    };
-  }
-
-  Future<void> updateStatus(
-    String docId,
-    String status,
-  ) async {
+    if (!confirm) return;
 
     await FirebaseFirestore.instance
-        .collection(
-          widget.collectionPath,
-        )
+        .collection(widget.collectionPath)
         .doc(docId)
-        .update({
-
-      'status': status,
-    });
+        .delete();
 
     if (mounted) {
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-
-        SnackBar(
-
-          content: Text(
-
-            "Opportunity $status",
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Deleted successfully")));
     }
   }
 
+  // UPDATE STATUS
+  Future<void> updateStatus(String docId, String status) async {
+    await FirebaseFirestore.instance
+        .collection(widget.collectionPath)
+        .doc(docId)
+        .update({'status': status});
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Updated to $status")));
+    }
+  }
+
+  // DELETE DIALOG
   Future<bool> _showDeleteDialog() async {
-
     return await showDialog(
-
           context: context,
 
-          builder: (ctx) => AlertDialog(
+          builder: (ctx) {
+            return AlertDialog(
+              title: const Text("Delete Item?"),
 
-            title:
-                const Text("Delete Item?"),
+              content: const Text("This action cannot be undone."),
 
-            content: const Text(
-              "This action cannot be undone.",
-            ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
 
-            actions: [
-
-              TextButton(
-
-                onPressed: () =>
-                    Navigator.pop(
-                  ctx,
-                  false,
+                  child: const Text("Cancel"),
                 ),
 
-                child:
-                    const Text("Cancel"),
-              ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
 
-              TextButton(
+                  child: const Text(
+                    "Delete",
 
-                onPressed: () =>
-                    Navigator.pop(
-                  ctx,
-                  true,
-                ),
-
-                child: const Text(
-
-                  "Delete",
-
-                  style: TextStyle(
-                    color: Colors.red,
+                    style: TextStyle(color: Colors.red),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+          },
         ) ??
         false;
   }
 
-  Color getStatusColor(
-    String status,
-  ) {
-
+  // STATUS COLOR
+  Color getStatusColor(String status) {
     switch (status) {
-
       case "approved":
         return Colors.green;
 
@@ -163,457 +121,428 @@ class _ManageItemsPageState
     }
   }
 
+  // OPEN ADD / EDIT PAGE
+  void openEditor({String? docId, Map<String, dynamic>? data}) {
+    Navigator.push(
+      context,
+
+      MaterialPageRoute(
+        builder: (_) => AddEditItemPage(
+          collectionPath: widget.collectionPath,
+
+          docId: docId,
+
+          itemData: data,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-
-    const Color fueRed =
-        Color(0xffb1170c);
+    const Color fueRed = Color(0xffb1170c);
 
     return Scaffold(
-
       appBar: AppBar(
-
-        title: Text( widget.title,
-        ),
+        title: Text(widget.title),
 
         backgroundColor: fueRed,
 
-        foregroundColor:
-            Colors.white,
+        foregroundColor: Colors.white,
       ),
 
-      body:
-          StreamBuilder<QuerySnapshot>(
+      body: Column(
+        children: [
+          // FILTER PILLS
+          if (isOpportunities)
+            Padding(
+              padding: const EdgeInsets.all(12),
 
-        stream:
-            FirebaseFirestore.instance
+              child: FilterPills(
+                options: const ["all", "pending", "approved", "rejected"],
 
-                .collection(
-                  widget.collectionPath,
-                )
+                selected: selectedFilter,
 
-                .snapshots(),
-
-        builder: (
-          context,
-          snapshot,
-        ) {
-
-          if (snapshot.hasError) {
-
-            return const Center(
-              child:
-                  Text("Something went wrong"),
-            );
-          }
-
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
-
-            return const Center(
-              child:
-                  LoadingIndicator(),
-            );
-          }
-
-          final docs =
-              snapshot.data!.docs;
-
-          if (docs.isEmpty) {
-
-            return Center(
-
-              child: Column(
-
-                mainAxisAlignment:
-                    MainAxisAlignment.center,
-
-                children: const [
-
-                  Icon(
-                    Icons.inbox,
-                    size: 60,
-                    color: Colors.grey,
-                  ),
-
-                  SizedBox(height: 10),
-
-                  Text("No items yet"),
-
-                  Text(
-
-                    "Tap + to add new data",
-
-                    style: TextStyle(
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
+                onSelected: (value) {
+                  setState(() {
+                    selectedFilter = value;
+                  });
+                },
               ),
-            );
-          }
+            ),
 
-          return ListView.builder(
+          // LIST
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection(widget.collectionPath)
+                  .orderBy("createdAt", descending: true)
+                  .snapshots(),
 
-            itemCount: docs.length,
+              builder: (context, snapshot) {
+                // ERROR
+                if (snapshot.hasError) {
+                  return const Center(child: Text("Something went wrong"));
+                }
 
-            itemBuilder: (
-              context,
-              index,
-            ) {
+                // LOADING
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: LoadingIndicator());
+                }
 
-              final data =
-                  docs[index].data()
-                      as Map<String, dynamic>;
+                // FILTER DOCS
+                final docs = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
 
-              final String docId =
-                  docs[index].id;
+                  // USERS
+                  if (isUsers && data['role'] != 'student') {
+                    return false;
+                  }
 
-              final String status =
-                  data['status'] ??
-                      "pending";
+                  // OPPORTUNITIES FILTER
+                  if (isOpportunities && selectedFilter != "all") {
+                    return data['status'] == selectedFilter;
+                  }
 
-              return Card(
+                  return true;
+                }).toList();
 
-                margin:
-                    const EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: 8,
-                ),
+                // EMPTY
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
 
-                elevation: 3,
+                      children: const [
+                        Icon(Icons.inbox, size: 65, color: Colors.grey),
 
-                child: Padding(
+                        SizedBox(height: 10),
 
-                  padding:
-                      const EdgeInsets.all(
-                    8,
-                  ),
+                        Text("No items found"),
 
-                  child: Column(
+                        SizedBox(height: 5),
 
-                    children: [
+                        Text(
+                          "Tap + to add items",
 
-                      ListTile(
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-                        leading:
-                            data['imageUrl'] !=
-                                    null
+                // LIST
+                return ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 90),
 
-                                ? ClipRRect(
+                  itemCount: docs.length,
 
-                                    borderRadius:
-                                        BorderRadius.circular(
-                                      8,
-                                    ),
+                  itemBuilder: (context, index) {
+                    final doc = docs[index];
 
-                                    child:
-                                        Image.network(
+                    final data = doc.data() as Map<String, dynamic>;
 
-                                      data['imageUrl'],
+                    final String docId = doc.id;
 
+                    final imageUrl = data['imgUrl'];
+
+                    final String status = data['status'] ?? "pending";
+
+                    // DISPLAY TITLE
+                    final displayTitle =
+                        // USERS
+                        isUsers
+                        ? data['studentId'] ??
+                              data['id'] ??
+                              data['email']?.toString().split("@").first ??
+                              "Unknown Student"
+                        // POSTS
+                        : isPosts
+                        ? data['title'] ?? data['clubName'] ?? "Untitled Post"
+                        // DEFAULT
+                        : data['title'] ?? data['name'] ?? "No Title";
+
+                    // DISPLAY SUBTITLE
+                    final displaySubtitle =
+                        data['description'] ??
+                        data['content'] ??
+                        data['bio'] ??
+                        "";
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 8,
+                      ),
+
+                      elevation: 3,
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+
+                        child: Column(
+                          children: [
+                            ListTile(
+                              // IMAGE
+                              leading:
+                                  imageUrl != null &&
+                                      imageUrl.toString().isNotEmpty
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+
+                                      child: Image.network(
+                                        imageUrl,
+
+                                        width: 55,
+                                        height: 55,
+
+                                        fit: BoxFit.cover,
+
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Container(
+                                                width: 55,
+
+                                                height: 55,
+
+                                                color: Colors.grey[300],
+
+                                                child: const Icon(
+                                                  Icons.broken_image,
+
+                                                  color: Colors.grey,
+                                                ),
+                                              );
+                                            },
+                                      ),
+                                    )
+                                  : Container(
                                       width: 55,
                                       height: 55,
 
-                                      fit: BoxFit.cover,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[300],
+
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+
+                                      child: Icon(
+                                        isUsers
+                                            ? Icons.person
+                                            : isPosts
+                                            ? Icons.article
+                                            : isClubs
+                                            ? Icons.groups
+                                            : isEvents
+                                            ? Icons.event
+                                            : Icons.image,
+
+                                        color: Colors.grey,
+                                      ),
                                     ),
-                                  )
 
-                                : const Icon(
-                                    Icons.image,
-                                    size: 40,
+                              // TITLE
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      displayTitle,
+
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+
+                                        fontSize: 16,
+                                      ),
+                                    ),
                                   ),
 
-                        title: Row(
+                                  // STATUS BADGE
+                                  if (isOpportunities)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
 
-                          children: [
+                                      decoration: BoxDecoration(
+                                        color: getStatusColor(status),
 
-                            Expanded(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
 
-                              child: Text(
+                                      child: Text(
+                                        status.toUpperCase(),
 
-                                data['title'] ??
+                                        style: const TextStyle(
+                                          color: Colors.white,
 
-                                    data['name'] ??
+                                          fontSize: 11,
 
-                                    'No Title',
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
 
-                                style:
-                                    const TextStyle(
-                                  fontWeight:
-                                      FontWeight.bold,
-                                ),
+                              // SUBTITLE
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+
+                                children: [
+                                  const SizedBox(height: 6),
+
+                                  Text(
+                                    displaySubtitle,
+
+                                    maxLines: 2,
+
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+
+                                  const SizedBox(height: 8),
+
+                                  // TYPE
+                                  if (data['type'] != null)
+                                    Text(
+                                      data['type'],
+
+                                      style: const TextStyle(
+                                        fontSize: 12,
+
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+
+                                  // CATEGORY
+                                  if (data['category'] != null)
+                                    Text(
+                                      data['category'],
+
+                                      style: const TextStyle(
+                                        fontSize: 12,
+
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
 
-                            if (isOpportunities)
-
-                              Container(
-
-                                padding:
-                                    const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
+                            // APPROVE / REJECT
+                            if (isOpportunities && widget.isAdmin)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
                                 ),
 
-                                decoration:
-                                    BoxDecoration(
+                                child: Row(
+                                  children: [
+                                    // APPROVE
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                        ),
 
-                                  color:
-                                      getStatusColor(
-                                    status,
-                                  ),
-
-                                  borderRadius:
-                                      BorderRadius.circular(
-                                    20,
-                                  ),
-                                ),
-
-                                child: Text(
-
-                                  status
-                                      .toUpperCase(),
-
-                                  style:
-                                      const TextStyle(
-
-                                    color:
-                                        Colors.white,
-
-                                    fontSize: 11,
-
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-
-                        subtitle: Column(
-
-                          crossAxisAlignment:
-                              CrossAxisAlignment
-                                  .start,
-
-                          children: [
-
-                            const SizedBox(
-                                height: 5),
-
-                            Text(
-
-                              data['description'] ??
-
-                                  data['Description'] ??
-
-                                  '',
-
-                              maxLines: 2,
-
-                              overflow:
-                                  TextOverflow
-                                      .ellipsis,
-                            ),
-
-                            const SizedBox(
-                                height: 6),
-
-                            Text(
-
-                              data['type'] ??
-                                  'Unknown',
-
-                              style:
-                                  const TextStyle(
-
-                                fontSize: 12,
-
-                                color:
-                                    Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      if (isOpportunities && widget.isAdmin)
-
-                        Padding(
-
-                          padding:
-                              const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-
-                          child: Row(
-
-                            children: [
-
-                              // APPROVE
-                              Expanded(
-
-                                child:
-                                    ElevatedButton(
-
-                                  style:
-                                      ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Colors.green,
-                                  ),
-
-                                  onPressed:
-                                      status ==
-                                              "approved"
-
-                                          ? null
-
-                                          : () =>
-                                              updateStatus(
+                                        onPressed: status == "approved"
+                                            ? null
+                                            : () => updateStatus(
                                                 docId,
                                                 "approved",
                                               ),
 
-                                  child:
-                                      const Text(
-                                    "APPROVE",
-                                  ),
-                                ),
-                              ),
+                                        child: const Text(
+                                          "APPROVE",
 
-                              const SizedBox(
-                                  width: 10),
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
 
-                              // REJECT
-                              Expanded(
+                                    const SizedBox(width: 10),
 
-                                child:
-                                    ElevatedButton(
+                                    // REJECT
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                        ),
 
-                                  style:
-                                      ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Colors.red,
-                                  ),
-
-                                  onPressed:
-                                      status ==
-                                              "rejected"
-
-                                          ? null
-
-                                          : () =>
-                                              updateStatus(
+                                        onPressed: status == "rejected"
+                                            ? null
+                                            : () => updateStatus(
                                                 docId,
                                                 "rejected",
                                               ),
 
-                                  child:
-                                      const Text(
-                                    "REJECT",
-                                  ),
+                                        child: const Text(
+                                          "REJECT",
+
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
 
-                      // EDIT + DELETE
-                      Row(
+                            // ACTIONS
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
 
-                        mainAxisAlignment:
-                            MainAxisAlignment.end,
+                              children: [
+                                // EDIT
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
 
-                        children: [
-
-                          IconButton(
-
-                            icon: const Icon(
-                              Icons.edit,
-                              color:
-                                  Colors.blue,
-                            ),
-
-                            onPressed: () {
-
-                              Navigator.push(
-
-                                context,
-
-                                MaterialPageRoute(
-
-                                  builder: (_) =>
-                                      AddEditItemPage(
-
-                                    collectionPath:
-                                        widget.collectionPath,
-
-                                    docId: docId,
-
-                                    itemData:
-                                        data,
+                                    color: Colors.blue,
                                   ),
+
+                                  onPressed: () {
+                                    openEditor(docId: docId, data: data);
+                                  },
                                 ),
-                              );
-                            },
-                          ),
 
-                          IconButton(
+                                // DELETE
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
 
-                            icon: const Icon(
+                                    color: fueRed,
+                                  ),
 
-                              Icons.delete_outline,
-
-                              color: fueRed,
+                                  onPressed: () => deleteItem(docId),
+                                ),
+                              ],
                             ),
-
-                            tooltip:
-                                "Delete",
-
-                            onPressed: () =>
-                                deleteItem(
-                              docId,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
 
-      floatingActionButton:
-          FloatingActionButton(
-
+      // ADD BUTTON
+      floatingActionButton: FloatingActionButton(
         backgroundColor: fueRed,
 
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.add, color: Colors.white),
 
         onPressed: () {
-
-          Navigator.push(
-
-            context,
-
-            MaterialPageRoute(
-
-              builder: (_) =>
-                  AddEditItemPage(
-
-                collectionPath:
-                    widget.collectionPath,
-              ),
-            ),
-          );
+          openEditor();
         },
       ),
     );

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -21,36 +22,48 @@ class AddEditItemPage extends StatefulWidget {
   });
 
   @override
-  State<AddEditItemPage> createState() =>
-      _AddEditItemPageState();
+  State<AddEditItemPage> createState() => _AddEditItemPageState();
 }
 
-class _AddEditItemPageState
-    extends State<AddEditItemPage> {
-
+class _AddEditItemPageState extends State<AddEditItemPage> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController titleController =
-      TextEditingController();
+  // COMMON
+  final titleController = TextEditingController();
 
-  final TextEditingController descController =
-      TextEditingController();
+  final descController = TextEditingController();
 
-  final TextEditingController requirementsController =
-      TextEditingController();
+  final locationController = TextEditingController();
 
-  final TextEditingController salaryController =
-      TextEditingController();
+  // OPPORTUNITIES
+  final requirementsController = TextEditingController();
 
-  final TextEditingController locationController =
-      TextEditingController();
+  final salaryController = TextEditingController();
 
-  final TextEditingController cgpaController =
-      TextEditingController();
+  final cgpaController = TextEditingController();
 
+  // USERS
+  final studentIdController = TextEditingController();
+
+  final facultyController = TextEditingController();
+
+  final majorController = TextEditingController();
+
+  final minorController = TextEditingController();
+
+  final academicYearController = TextEditingController();
+
+  final studentCgpaController = TextEditingController();
+
+  // POSTS
+  final clubNameController = TextEditingController();
+
+  // STATES
   String selectedType = "internship";
 
   String selectedCategory = "Tech";
+
+  String selectedVisibility = "public";
 
   DateTime? selectedDeadline;
 
@@ -73,6 +86,21 @@ class _AddEditItemPageState
     "Dentistry",
   ];
 
+  // COLLECTION TYPES
+  bool get isOpportunities => widget.collectionPath == "opportunities";
+
+  bool get isUsers => widget.collectionPath == "users";
+
+  bool get isPosts => widget.collectionPath == "posts";
+
+  bool get isClubs => widget.collectionPath == "Clubs";
+
+  bool get isEvents => widget.collectionPath == "Events";
+
+  bool get isVolunteering => widget.collectionPath == "volunteering";
+
+  bool get isEdit => widget.docId != null;
+
   @override
   void initState() {
     super.initState();
@@ -81,165 +109,143 @@ class _AddEditItemPageState
     loadCompanyData();
 
     if (widget.itemData != null) {
-
       final data = widget.itemData!;
 
-      titleController.text =
-          data["title"] ?? "";
+      // COMMON
+      titleController.text = data["title"] ?? data["name"] ?? "";
 
-      descController.text =
-          data["description"] ?? "";
+      descController.text = data["description"] ?? data["content"] ?? "";
 
-      requirementsController.text =
-          data["requirements"] ?? "";
+      existingImageUrl = data["imgUrl"];
 
-      salaryController.text =
-          data["salary"]?.toString() ?? "";
+      locationController.text = data["location"] ?? "";
 
-      locationController.text =
-          data["location"] ?? "";
+      selectedType = data["type"] ?? "internship";
 
-      cgpaController.text =
-          data["minimumCgpa"]?.toString() ?? "";
+      selectedCategory = data["category"] ?? "Tech";
 
-      selectedType =
-          data["type"] ?? "internship";
+      // OPPORTUNITIES
+      requirementsController.text = data["requirements"] ?? "";
 
-      selectedCategory =
-          data["category"] ?? "Tech";
+      salaryController.text = data["salary"]?.toString() ?? "";
 
-      existingImageUrl =
-          data["imageUrl"];
+      cgpaController.text = data["minimumCgpa"]?.toString() ?? "";
 
       if (data["requiredSkills"] != null) {
-
-        selectedSkills =
-            Set<String>.from(
-              data["requiredSkills"],
-            );
+        selectedSkills = Set<String>.from(data["requiredSkills"]);
       }
 
-      if (data["deadline"] != null &&
-          data["deadline"] is Timestamp) {
-
-        selectedDeadline =
-            (data["deadline"] as Timestamp)
-                .toDate();
+      if (data["deadline"] != null && data["deadline"] is Timestamp) {
+        selectedDeadline = (data["deadline"] as Timestamp).toDate();
       }
+
+      // POSTS
+      selectedVisibility = data["visibility"] ?? "public";
+
+      clubNameController.text = data["clubName"] ?? "";
+
+      // USERS
+      studentIdController.text = data["studentId"] ?? "";
+
+      facultyController.text = data["faculty"] ?? "";
+
+      majorController.text = data["major"] ?? "";
+
+      minorController.text = data["minor"] ?? "";
+
+      academicYearController.text = data["academicYear"] ?? "";
+
+      studentCgpaController.text = data["cgpa"]?.toString() ?? "";
     }
   }
 
   @override
   void dispose() {
-
     titleController.dispose();
-
     descController.dispose();
-
     requirementsController.dispose();
-
     salaryController.dispose();
-
     locationController.dispose();
-
     cgpaController.dispose();
+
+    studentIdController.dispose();
+    facultyController.dispose();
+    majorController.dispose();
+    minorController.dispose();
+    academicYearController.dispose();
+    studentCgpaController.dispose();
+
+    clubNameController.dispose();
 
     super.dispose();
   }
 
+  // LOAD COMPANY
   Future<void> loadCompanyData() async {
-
-    final uid =
-        FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
     if (uid == null) return;
 
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
 
     final data = doc.data() ?? {};
 
     setState(() {
-
-      companyName =
-          data['companyName'] ?? "Company";
+      companyName = data['companyName'] ?? "Company";
     });
   }
 
+  // LOAD SKILLS
   Future<void> loadSkills() async {
-
-    final snapshot =
-        await FirebaseFirestore.instance
-            .collection('skills')
-            .get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('skills')
+        .get();
 
     setState(() {
-
-      allSkills = snapshot.docs
-          .map((doc) => doc['name'].toString())
-          .toList();
+      allSkills = snapshot.docs.map((doc) => doc['name'].toString()).toList();
     });
   }
 
+  // PICK IMAGE
   Future<void> pickImage() async {
-
-    final pickedFile =
-        await ImagePicker().pickImage(
+    final pickedFile = await ImagePicker().pickImage(
       source: ImageSource.gallery,
+
       imageQuality: 70,
     );
 
     if (pickedFile != null) {
-
       setState(() {
-
-        selectedImage =
-            File(pickedFile.path);
+        selectedImage = File(pickedFile.path);
       });
     }
   }
 
+  // PICK DATE
   Future<void> pickDeadline() async {
-
-    final pickedDate =
-        await showDatePicker(
+    final pickedDate = await showDatePicker(
       context: context,
+
       firstDate: DateTime.now(),
+
       lastDate: DateTime(2035),
-      initialDate:
-          selectedDeadline ??
-              DateTime.now(),
+
+      initialDate: selectedDeadline ?? DateTime.now(),
     );
 
     if (pickedDate != null) {
-
       setState(() {
-
         selectedDeadline = pickedDate;
       });
     }
   }
 
+  // SAVE ITEM
   Future<void> saveItem() async {
-
     if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (selectedDeadline == null) {
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-
-        const SnackBar(
-          content:
-              Text("Select deadline"),
-        ),
-      );
-
       return;
     }
 
@@ -248,104 +254,138 @@ class _AddEditItemPageState
     });
 
     try {
+      String? imageUrl = existingImageUrl;
 
-      String? imageUrl =
-          existingImageUrl;
-
+      // UPLOAD IMAGE
       if (selectedImage != null) {
+        final fileName = DateTime.now().millisecondsSinceEpoch.toString();
 
-        final ref =
-            FirebaseStorage.instance
-                .ref()
-                .child('opportunities')
-                .child(
-                  '${DateTime.now().millisecondsSinceEpoch}.jpg',
-                );
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child(widget.collectionPath)
+            .child("$fileName.jpg");
 
         await ref.putFile(selectedImage!);
 
-        imageUrl =
-            await ref.getDownloadURL();
+        imageUrl = await ref.getDownloadURL();
       }
 
-      final currentUser =
-          FirebaseAuth.instance.currentUser;
+      final currentUser = FirebaseAuth.instance.currentUser;
 
-      final data = {
+      final Map<String, dynamic> data = {
+        // COMMON
+        "imgUrl": imageUrl,
 
-        "title":
-            titleController.text.trim(),
+        "updatedAt": FieldValue.serverTimestamp(),
 
-        "description":
-            descController.text.trim(),
+        // OPPORTUNITIES
+        if (isOpportunities) ...{
+          "title": titleController.text.trim(),
 
-        "type":
-            selectedType,
+          "description": descController.text.trim(),
 
-        "providerName":
-            companyName,
+          "type": selectedType,
 
-        "deadline":
-            Timestamp.fromDate(
-              selectedDeadline!,
-            ),
+          "providerName": companyName,
 
-        "requirements":
-            requirementsController.text
-                .trim(),
+          "requirements": requirementsController.text.trim(),
 
-        "salary":
-            int.tryParse(
-                  salaryController.text,
-                ) ??
-                0,
+          "salary": int.tryParse(salaryController.text) ?? 0,
 
-        "category":
-            selectedCategory,
+          "category": selectedCategory,
 
-        "minimumCgpa":
-            cgpaController.text.trim().isEmpty
-                ? null
-                : double.tryParse(
-                    cgpaController.text,
-                  ),
+          "minimumCgpa": cgpaController.text.trim().isEmpty
+              ? null
+              : double.tryParse(cgpaController.text),
 
-        "imageUrl":
-            imageUrl,
+          "location": locationController.text.trim(),
 
-        "location":
-            locationController.text.trim(),
+          "requiredSkills": selectedSkills.toList(),
 
-        "requiredSkills":
-            selectedSkills.toList(),
+          "deadline": selectedDeadline == null
+              ? null
+              : Timestamp.fromDate(selectedDeadline!),
 
-        "applicationCount":
-            0,
+          if (!isEdit) "status": "pending",
 
-        if (widget.docId == null)
-          "status": "pending",
+          if (!isEdit) "applicationCount": 0,
 
-        "featured":
-            false,
+          if (!isEdit) "featured": false,
+        },
 
-        "createdBy":
-            currentUser?.uid,
+        // POSTS
+        if (isPosts) ...{
+          "title": titleController.text.trim(),
 
-        "updatedAt":
-            FieldValue.serverTimestamp(),
+          "content": descController.text.trim(),
+
+          "clubName": clubNameController.text.trim(),
+
+          "visibility": selectedVisibility,
+        },
+
+        // USERS
+        if (isUsers) ...{
+          "name": titleController.text.trim(),
+
+          "studentId": studentIdController.text.trim(),
+
+          "faculty": facultyController.text.trim(),
+
+          "major": majorController.text.trim(),
+
+          "minor": minorController.text.trim(),
+
+          "academicYear": academicYearController.text.trim(),
+
+          "cgpa": double.tryParse(studentCgpaController.text),
+        },
+
+        // CLUBS
+        if (isClubs) ...{
+          "name": titleController.text.trim(),
+
+          "description": descController.text.trim(),
+        },
+
+        // EVENTS
+        if (isEvents) ...{
+          "title": titleController.text.trim(),
+
+          "description": descController.text.trim(),
+
+          "location": locationController.text.trim(),
+
+          "date": selectedDeadline == null
+              ? null
+              : Timestamp.fromDate(selectedDeadline!),
+        },
+
+        // VOLUNTEERING
+        if (isVolunteering) ...{
+          "title": titleController.text.trim(),
+
+          "description": descController.text.trim(),
+
+          "location": locationController.text.trim(),
+
+          "deadline": selectedDeadline == null
+              ? null
+              : Timestamp.fromDate(selectedDeadline!),
+        },
+
+        if (!isEdit) "createdAt": FieldValue.serverTimestamp(),
+
+        if (!isEdit) "createdBy": currentUser?.uid,
       };
 
-      if (widget.docId == null) {
-
-        data["createdAt"] =
-            FieldValue.serverTimestamp();
-
+      // CREATE
+      if (!isEdit) {
         await FirebaseFirestore.instance
             .collection(widget.collectionPath)
             .add(data);
-
       } else {
-
+        // UPDATE
         await FirebaseFirestore.instance
             .collection(widget.collectionPath)
             .doc(widget.docId)
@@ -353,37 +393,25 @@ class _AddEditItemPageState
       }
 
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isEdit ? "Updated successfully" : "Added successfully",
+            ),
 
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
-
-          const SnackBar(
-            content:
-                Text("Saved successfully"),
-            backgroundColor:
-                Colors.green,
+            backgroundColor: Colors.green,
           ),
         );
 
         Navigator.pop(context);
       }
-
     } catch (e) {
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-
-        SnackBar(
-          content: Text("Error: $e"),
-        ),
-      );
-
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
-
       if (mounted) {
-
         setState(() {
-
           isLoading = false;
         });
       }
@@ -392,408 +420,340 @@ class _AddEditItemPageState
 
   @override
   Widget build(BuildContext context) {
-
-    const Color fueRed =
-        Color(0xffb1170c);
+    const Color fueRed = Color(0xffb1170c);
 
     return Scaffold(
-
       appBar: AppBar(
         title: Text(
-          widget.docId == null
-              ? "Add Opportunity"
-              : "Edit Opportunity",
+          isEdit
+              ? "Edit ${widget.collectionPath}"
+              : "Add ${widget.collectionPath}",
         ),
 
         backgroundColor: fueRed,
+
         foregroundColor: Colors.white,
       ),
 
       body: isLoading
-
-          ? const Center(
-              child: LoadingIndicator(),
-            )
-
+          ? const Center(child: LoadingIndicator())
           : Form(
               key: _formKey,
 
               child: SingleChildScrollView(
-
-                padding:
-                    const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
 
                 child: Column(
-
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
 
                   children: [
-
+                    // IMAGE
                     GestureDetector(
-
                       onTap: pickImage,
 
                       child: Container(
-
                         height: 200,
+
                         width: double.infinity,
 
                         decoration: BoxDecoration(
                           color: Colors.grey[200],
 
-                          borderRadius:
-                              BorderRadius.circular(
-                            12,
-                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
 
                         child: selectedImage != null
-
                             ? ClipRRect(
-                                borderRadius:
-                                    BorderRadius.circular(
-                                  12,
-                                ),
+                                borderRadius: BorderRadius.circular(12),
 
-                                child: Image.file(
-                                  selectedImage!,
+                                child: kIsWeb
+                                    ? Image.network(
+                                        selectedImage!.path,
+
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.file(
+                                        selectedImage!,
+
+                                        fit: BoxFit.cover,
+                                      ),
+                              )
+                            : existingImageUrl != null &&
+                                  existingImageUrl!.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+
+                                child: Image.network(
+                                  existingImageUrl!,
+
                                   fit: BoxFit.cover,
+
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      color: Colors.grey[300],
+
+                                      child: const Icon(
+                                        Icons.broken_image,
+
+                                        size: 50,
+
+                                        color: Colors.grey,
+                                      ),
+                                    );
+                                  },
                                 ),
                               )
+                            : const Icon(
+                                Icons.add_a_photo,
 
-                            : existingImageUrl != null
+                                size: 50,
 
-                                ? ClipRRect(
-                                    borderRadius:
-                                        BorderRadius.circular(
-                                      12,
-                                    ),
-
-                                    child:
-                                        Image.network(
-                                      existingImageUrl!,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  )
-
-                                : const Icon(
-                                    Icons.add_a_photo,
-                                    size: 50,
-                                    color: Colors.grey,
-                                  ),
+                                color: Colors.grey,
+                              ),
                       ),
                     ),
 
                     const SizedBox(height: 20),
 
+                    // TITLE
                     TextFormField(
                       controller: titleController,
 
-                      validator: (value) =>
-                          value == null ||
-                                  value.trim().isEmpty
-                              ? "Required"
-                              : null,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "Required";
+                        }
 
-                      decoration:
-                          const InputDecoration(
-                        labelText: "Title",
-                        border:
-                            OutlineInputBorder(),
+                        return null;
+                      },
+
+                      decoration: InputDecoration(
+                        labelText: isUsers
+                            ? "Student Name"
+                            : isClubs
+                            ? "Club Name"
+                            : "Title",
+
+                        border: const OutlineInputBorder(),
                       ),
                     ),
 
                     const SizedBox(height: 15),
 
+                    // DESCRIPTION
                     TextFormField(
                       controller: descController,
 
                       maxLines: 4,
 
-                      validator: (value) =>
-                          value == null ||
-                                  value.trim().isEmpty
-                              ? "Required"
-                              : null,
+                      decoration: InputDecoration(
+                        labelText: isPosts ? "Content" : "Description",
 
-                      decoration:
-                          const InputDecoration(
-                        labelText:
-                            "Description",
-                        border:
-                            OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
 
-                    const SizedBox(height: 15),
+                    // USERS
+                    if (isUsers) ...[
+                      const SizedBox(height: 15),
 
-                    DropdownButtonFormField<String>(
+                      TextFormField(
+                        controller: studentIdController,
 
-                      value: selectedType,
+                        decoration: const InputDecoration(
+                          labelText: "Student ID",
 
-                      decoration:
-                          const InputDecoration(
-                        labelText: "Type",
-                        border:
-                            OutlineInputBorder(),
+                          border: OutlineInputBorder(),
+                        ),
                       ),
 
-                      items: const [
+                      const SizedBox(height: 15),
 
-                        DropdownMenuItem(
-                          value: "internship",
-                          child: Text(
-                            "Internship",
-                          ),
+                      TextFormField(
+                        controller: facultyController,
+
+                        decoration: const InputDecoration(
+                          labelText: "Faculty",
+
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      TextFormField(
+                        controller: majorController,
+
+                        decoration: const InputDecoration(
+                          labelText: "Major",
+
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      TextFormField(
+                        controller: minorController,
+
+                        decoration: const InputDecoration(
+                          labelText: "Minor",
+
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      TextFormField(
+                        controller: academicYearController,
+
+                        decoration: const InputDecoration(
+                          labelText: "Academic Year",
+
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      TextFormField(
+                        controller: studentCgpaController,
+
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
                         ),
 
-                        DropdownMenuItem(
-                          value: "job",
-                          child: Text(
-                            "Job",
-                          ),
+                        decoration: const InputDecoration(
+                          labelText: "CGPA",
+
+                          border: OutlineInputBorder(),
                         ),
-                      ],
+                      ),
+                    ],
 
-                      onChanged: (value) {
+                    // POSTS
+                    if (isPosts) ...[
+                      const SizedBox(height: 15),
 
-                        setState(() {
+                      TextFormField(
+                        controller: clubNameController,
 
-                          selectedType = value!;
-                        });
-                      },
-                    ),
+                        decoration: const InputDecoration(
+                          labelText: "Club Name (Optional)",
 
-                    const SizedBox(height: 15),
-
-                    DropdownButtonFormField<String>(
-
-                      value: selectedCategory,
-
-                      decoration:
-                          const InputDecoration(
-                        labelText:
-                            "Category",
-                        border:
-                            OutlineInputBorder(),
+                          border: OutlineInputBorder(),
+                        ),
                       ),
 
-                      items:
-                          categories.map((cat) {
+                      const SizedBox(height: 15),
 
-                        return DropdownMenuItem(
-                          value: cat,
-                          child: Text(cat),
-                        );
-                      }).toList(),
+                      DropdownButtonFormField<String>(
+                        value: selectedVisibility,
 
-                      onChanged: (value) {
+                        decoration: const InputDecoration(
+                          labelText: "Visibility",
 
-                        setState(() {
+                          border: OutlineInputBorder(),
+                        ),
 
-                          selectedCategory =
-                              value!;
-                        });
-                      },
-                    ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: "public",
 
-                    const SizedBox(height: 15),
-
-                    TextFormField(
-                      controller:
-                          salaryController,
-
-                      keyboardType:
-                          TextInputType.number,
-
-                      decoration:
-                          const InputDecoration(
-                        labelText:
-                            "Salary (EGP)",
-                        border:
-                            OutlineInputBorder(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    TextFormField(
-                      controller:
-                          cgpaController,
-
-                      keyboardType:
-                          const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-
-                      decoration:
-                          const InputDecoration(
-                        labelText:
-                            "Minimum CGPA",
-                        border:
-                            OutlineInputBorder(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    TextFormField(
-                      controller:
-                          requirementsController,
-
-                      maxLines: 3,
-
-                      decoration:
-                          const InputDecoration(
-                        labelText:
-                            "Requirements",
-                        border:
-                            OutlineInputBorder(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    const Text(
-                      "Required Skills",
-                      style: TextStyle(
-                        fontWeight:
-                            FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-
-                      children:
-                          allSkills.map((skill) {
-
-                        final isSelected =
-                            selectedSkills
-                                .contains(skill);
-
-                        return GestureDetector(
-
-                          onTap: () {
-
-                            setState(() {
-
-                              if (isSelected) {
-
-                                selectedSkills
-                                    .remove(skill);
-
-                              } else {
-
-                                selectedSkills
-                                    .add(skill);
-                              }
-                            });
-                          },
-
-                          child: Container(
-
-                            padding:
-                                const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? fueRed
-                                  : Colors.grey[200],
-
-                              borderRadius:
-                                  BorderRadius.circular(
-                                20,
-                              ),
-                            ),
-
-                            child: Text(
-                              skill,
-
-                              style: TextStyle(
-                                color:
-                                    isSelected
-                                        ? Colors.white
-                                        : Colors.black,
-                              ),
-                            ),
+                            child: Text("Public"),
                           ),
-                        );
-                      }).toList(),
-                    ),
 
-                    const SizedBox(height: 20),
+                          DropdownMenuItem(
+                            value: "clubExclusive",
 
-                    TextFormField(
-                      controller:
-                          locationController,
+                            child: Text("Club Exclusive"),
+                          ),
+                        ],
 
-                      decoration:
-                          const InputDecoration(
-                        labelText:
-                            "Location",
-                        border:
-                            OutlineInputBorder(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedVisibility = value!;
+                          });
+                        },
                       ),
-                    ),
+                    ],
 
-                    const SizedBox(height: 15),
+                    // OPPORTUNITIES
+                    if (isOpportunities) ...[
+                      const SizedBox(height: 15),
 
+                      DropdownButtonFormField<String>(
+                        value: selectedType,
+
+                        decoration: const InputDecoration(
+                          labelText: "Type",
+
+                          border: OutlineInputBorder(),
+                        ),
+
+                        items: const [
+                          DropdownMenuItem(
+                            value: "internship",
+
+                            child: Text("Internship"),
+                          ),
+
+                          DropdownMenuItem(value: "job", child: Text("Job")),
+                        ],
+
+                        onChanged: (value) {
+                          setState(() {
+                            selectedType = value!;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      DropdownButtonFormField<String>(
+                        value: selectedCategory,
+
+                        decoration: const InputDecoration(
+                          labelText: "Category",
+
+                          border: OutlineInputBorder(),
+                        ),
+
+                        items: categories.map((cat) {
+                          return DropdownMenuItem(value: cat, child: Text(cat));
+                        }).toList(),
+
+                        onChanged: (value) {
+                          setState(() {
+                            selectedCategory = value!;
+                          });
+                        },
+                      ),
+                    ],
+
+                    const SizedBox(height: 30),
+
+                    // SAVE
                     SizedBox(
                       width: double.infinity,
 
-                      child: OutlinedButton.icon(
-
-                        onPressed:
-                            pickDeadline,
-
-                        icon: const Icon(
-                          Icons.calendar_today,
-                        ),
-
-                        label: Text(
-
-                          selectedDeadline == null
-
-                              ? "Select Deadline"
-
-                              : "${selectedDeadline!.day}/${selectedDeadline!.month}/${selectedDeadline!.year}",
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 25),
-
-                    SizedBox(
-
-                      width: double.infinity,
                       height: 52,
 
                       child: ElevatedButton(
-
-                        style:
-                            ElevatedButton.styleFrom(
-                          backgroundColor:
-                              fueRed,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: fueRed,
                         ),
 
-                        onPressed:
-                            saveItem,
+                        onPressed: saveItem,
 
-                        child: const Text(
-                          "SAVE OPPORTUNITY",
+                        child: Text(
+                          isEdit ? "UPDATE" : "SAVE",
 
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontWeight:
-                                FontWeight.bold,
+
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),

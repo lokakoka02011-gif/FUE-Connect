@@ -7,6 +7,7 @@ import 'package:fue_connect/screens/auth/login_screen.dart';
 import 'package:fue_connect/screens/features/settings_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
 
@@ -19,8 +20,6 @@ class _AccountPageState extends State<AccountPage> {
 
   late Future<Map<String, dynamic>> _profileFuture;
 
-  final TextEditingController _descriptionController = TextEditingController();
-
   Set<String> _selectedSkills = {};
   Set<String> _selectedClubs = {};
   List<String> _selectedInterests = [];
@@ -32,15 +31,13 @@ class _AccountPageState extends State<AccountPage> {
     "Economics and Political Science",
     "Engineering",
     "Computer Science",
+    "Pharmacy",
   ];
   List<String> allSkills = [];
-  final List<int> academicYears = [
-    1, 2, 3, 4, 5
-  ];
+  final List<int> academicYears = [1, 2, 3, 4, 5];
 
   final String usersCollection = "users";
-  final String skillsCollection = "student_skills";
-
+  String? cvUrl;
 
   @override
   void initState() {
@@ -56,49 +53,45 @@ class _AccountPageState extends State<AccountPage> {
 
   @override
   void dispose() {
-    _descriptionController.dispose();
     super.dispose();
   }
 
-// fetch profile data w load skills/interests from Firestore
+  // fetch profile data w load skills/interests from Firestore
+
   Future<Map<String, dynamic>> _fetchFullProfile() async {
     if (uid == null) return {};
 
-    final results = await Future.wait([
-      FirebaseFirestore.instance.collection(usersCollection).doc(uid).get(),
-      FirebaseFirestore.instance.collection(skillsCollection).doc(uid).get(),
-    ]);
+    final studentDoc = await FirebaseFirestore.instance
+        .collection(usersCollection)
+        .doc(uid)
+        .get();
 
-    final studentDoc = results[0];
-    final skillDoc = results[1];
+    final studentData = studentDoc.data() ?? {};
 
-    final studentData =
-        studentDoc.data() ?? {};
-        final clubsData = studentData['clubs'];
+    final clubsData = studentData['clubs'];
 
-        if (clubsData is List) {
-          _selectedClubs = Set<String>.from(clubsData);
-        }
-        final interestsData = studentData['interests'];
+    if (clubsData is List) {
+      _selectedClubs = Set<String>.from(clubsData);
+    }
 
-        if (interestsData is List) {
-          _selectedInterests =
-              List<String>.from(interestsData);
-        }
+    final interestsData = studentData['interests'];
 
-        final skillsData = (skillDoc.data() as Map?)?['skills'];
+    if (interestsData is List) {
+      _selectedInterests = List<String>.from(interestsData);
+    }
 
-        if (skillsData is List) {
-          _selectedSkills =
-              Set<String>.from(skillsData);
-        }
+    final skillsData = studentData['skills'];
 
-    return {
-      "info": studentData,
-    };
+    if (skillsData is List) {
+      _selectedSkills = Set<String>.from(skillsData);
+    }
+
+    cvUrl = studentData['cvUrl'];
+
+    return {"info": studentData};
   }
 
-// first time user yemla personal info
+  // first time user yemla personal info
   Future<void> _checkFirstTimeUser() async {
     if (uid == null) return;
 
@@ -127,12 +120,12 @@ class _AccountPageState extends State<AccountPage> {
 
     final data = doc.data() ?? {};
 
-    final nameController =
-        TextEditingController(
-          text:
-              data['fullName'] ??
-              '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}',
-        );    final emailController = TextEditingController(text: user?.email ?? "");
+    final nameController = TextEditingController(
+      text:
+          data['fullName'] ??
+          '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}',
+    );
+    final emailController = TextEditingController(text: user?.email ?? "");
     final majorController = TextEditingController();
     final minorController = TextEditingController();
     final cgpaController = TextEditingController();
@@ -142,9 +135,11 @@ class _AccountPageState extends State<AccountPage> {
     final personalEmailController = TextEditingController(
       text: data['personalEmail'] ?? "",
     );
-    int? selectedAcademicYear =
-        data['academicYear'];
-    
+    final skillSearchController = TextEditingController();
+
+    List<String> filteredSkills = allSkills;
+    int? selectedAcademicYear = data['academicYear'];
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -167,9 +162,7 @@ class _AccountPageState extends State<AccountPage> {
                     ),
                     DropdownButtonFormField<String>(
                       value: selectedFaculty,
-                      decoration: const InputDecoration(
-                        labelText: "Faculty",
-                      ),
+                      decoration: const InputDecoration(labelText: "Faculty"),
                       items: faculties.map((faculty) {
                         return DropdownMenuItem(
                           value: faculty,
@@ -192,28 +185,28 @@ class _AccountPageState extends State<AccountPage> {
                         labelText: "Minor (Optional)",
                       ),
                     ),
-                      TextField(
-                        controller: cgpaController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d{0,2}'),
-                          ),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: "CGPA",
-                          hintText: "e.g. 3.75",
-                        ),
+                    TextField(
+                      controller: cgpaController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
                       ),
-                      TextField(
-                        controller: phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(
-                          labelText: "Phone Number",
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d*\.?\d{0,2}'),
                         ),
+                      ],
+                      decoration: const InputDecoration(
+                        labelText: "CGPA",
+                        hintText: "e.g. 3.75",
                       ),
+                    ),
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: "Phone Number",
+                      ),
+                    ),
 
                     DropdownButtonFormField<int>(
                       value: selectedAcademicYear,
@@ -227,12 +220,12 @@ class _AccountPageState extends State<AccountPage> {
                             year == 1
                                 ? "First Year"
                                 : year == 2
-                                    ? "Second Year"
-                                    : year == 3
-                                        ? "Third Year"
-                                        : year == 4
-                                            ? "Fourth Year"
-                                            : "Fifth Year",
+                                ? "Second Year"
+                                : year == 3
+                                ? "Third Year"
+                                : year == 4
+                                ? "Fourth Year"
+                                : "Fifth Year",
                           ),
                         );
                       }).toList(),
@@ -251,237 +244,359 @@ class _AccountPageState extends State<AccountPage> {
                       ),
                     ),
 
-                const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "Club Memberships (Optional)",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Club Memberships (Optional)",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _clubNames.map((club) {
-                    final isSelected =
-                        _selectedClubs.contains(club);
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _clubNames.map((club) {
+                        final isSelected = _selectedClubs.contains(club);
 
-                    return GestureDetector(
-                      onTap: () {
+                        return GestureDetector(
+                          onTap: () {
+                            setDialogState(() {
+                              if (isSelected) {
+                                _selectedClubs.remove(club);
+                              } else {
+                                _selectedClubs.add(club);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xffb1170c)
+                                  : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              club,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Skills (Optional)",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    TextField(
+                      controller: skillSearchController,
+                      decoration: const InputDecoration(
+                        hintText: "Search skills...",
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (value) {
                         setDialogState(() {
-                          if (isSelected) {
-                            _selectedClubs.remove(club);
-                          } else {
-                            _selectedClubs.add(club);
-                          }
+                          filteredSkills = allSkills
+                              .where(
+                                (skill) => skill.toLowerCase().contains(
+                                  value.toLowerCase(),
+                                ),
+                              )
+                              .toList();
                         });
                       },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xffb1170c)
-                              : Colors.grey[200],
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          club,
-                          style: TextStyle(
-                            color:
-                                isSelected ? Colors.white : Colors.black,
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: filteredSkills.map((skill) {
+                        final isSelected = _selectedSkills.contains(skill);
+
+                        return GestureDetector(
+                          onTap: () {
+                            setDialogState(() {
+                              if (isSelected) {
+                                _selectedSkills.remove(skill);
+                              } else {
+                                _selectedSkills.add(skill);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xffb1170c)
+                                  : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              skill,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black,
+                              ),
+                            ),
                           ),
-                        ),
+                        );
+                      }).toList(),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Interests",
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    );
-                  }).toList(),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: "Type interest and press enter",
+                      ),
+                      onSubmitted: (value) {
+                        final trimmed = value.trim();
+
+                        if (trimmed.isEmpty) return;
+
+                        if (!_selectedInterests.contains(trimmed)) {
+                          setDialogState(() {
+                            _selectedInterests.add(trimmed);
+                          });
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _selectedInterests.map((interest) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xffb1170c),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                interest,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              const SizedBox(width: 6),
+                              GestureDetector(
+                                onTap: () {
+                                  setDialogState(() {
+                                    _selectedInterests.remove(interest);
+                                  });
+                                },
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () async {
+                    if (selectedFaculty == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Please select a faculty"),
+                        ),
+                      );
+                      return;
+                    }
+                    final cgpa = double.tryParse(cgpaController.text);
 
-              ],
-            ),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () async {
-                if (selectedFaculty == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Please select a faculty"),
-                    ),
-                  );
-                  return;
-                }
-                final cgpa =
-                    double.tryParse(cgpaController.text);
-
-                if (cgpa == null || cgpa < 0 || cgpa > 4) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("CGPA must be between 0 and 4"),
-                    ),
-                  );
-                  return;
-                }
-                await FirebaseFirestore.instance
-                    .collection(usersCollection)
-                    .doc(uid)
-                    .set({
-                  "firstName":
-                      nameController.text.trim().split(" ").first,
-
-                  "lastName":
-                      nameController.text.trim().split(" ").length > 1
-                          ? nameController.text
+                    if (cgpa == null || cgpa < 0 || cgpa > 4) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("CGPA must be between 0 and 4"),
+                        ),
+                      );
+                      return;
+                    }
+                    await FirebaseFirestore.instance
+                        .collection(usersCollection)
+                        .doc(uid)
+                        .set({
+                          "firstName": nameController.text
                               .trim()
                               .split(" ")
-                              .sublist(1)
-                              .join(" ")
-                          : "",
+                              .first,
 
-                  "fullName": nameController.text.trim(),
-                  "email": emailController.text,
-                  "faculty": selectedFaculty,
-                  "academicYear": selectedAcademicYear,
-                  "phoneNumber": phoneController.text.trim(),
-                  "personalEmail": personalEmailController.text.trim(),
-                  "major": majorController.text.trim(),
-                  "minor": minorController.text.trim(),
-                  "cgpa": cgpaController.text.trim(),
-                  "clubs": _selectedClubs.toList(),
-                  "profileCompleted": true,
-                  "updatedAt": FieldValue.serverTimestamp(),
-                }, SetOptions(merge: true));
+                          "lastName":
+                              nameController.text.trim().split(" ").length > 1
+                              ? nameController.text
+                                    .trim()
+                                    .split(" ")
+                                    .sublist(1)
+                                    .join(" ")
+                              : "",
 
-                Navigator.pop(context);
+                          "fullName": nameController.text.trim(),
+                          "email": emailController.text,
+                          "faculty": selectedFaculty,
+                          "academicYear": selectedAcademicYear,
+                          "phoneNumber": phoneController.text.trim(),
+                          "personalEmail": personalEmailController.text.trim(),
+                          "major": majorController.text.trim(),
+                          "minor": minorController.text.trim(),
+                          "cgpa": cgpa,
+                          "clubs": _selectedClubs.toList(),
+                          "skills": _selectedSkills.toList(),
+                          "interests": _selectedInterests,
+                          "profileCompleted": true,
+                          "updatedAt": FieldValue.serverTimestamp(),
+                        }, SetOptions(merge: true));
 
-                setState(() {
-                  _profileFuture = _fetchFullProfile();
-                });
-              },
-              child: const Text("Save"),
-            )
-          ],
+                    Navigator.pop(context);
+
+                    setState(() {
+                      _profileFuture = _fetchFullProfile();
+                    });
+                  },
+                  child: const Text("Save"),
+                ),
+              ],
+            );
+          },
         );
-      },
-    );
       },
     );
   }
 
-
-    Future<void> _showEditProfileDialog() async{
-      final user = FirebaseAuth.instance.currentUser;
-      final doc = await FirebaseFirestore.instance
-          .collection(usersCollection)
-          .doc(uid)
-          .get();
-      final data = doc.data() ?? {};
-      selectedFaculty = data['faculty'];
-      int? selectedAcademicYear = data['academicYear'];
-      final nameController =
-          TextEditingController(
-            text: data['fullName'] ?? user?.displayName ?? "",
-          );
-      final emailController =
-          TextEditingController(text: user?.email ?? "");
-      final majorController = TextEditingController(
-          text: data['major'] ?? "",
-      );
-      final minorController = TextEditingController(
-          text: data['minor'] ?? "",
-      );
-      final cgpaController = TextEditingController(
-          text: data['cgpa'] ?? "",
-      );
-      final descriptionController =
-          TextEditingController(
-        text: data['description'] ?? "",
-      );
-      final skillSearchController =
-          TextEditingController();  
-      List<String> filteredSkills = allSkills;        
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          return StatefulBuilder(
+  Future<void> _showEditProfileDialog() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final doc = await FirebaseFirestore.instance
+        .collection(usersCollection)
+        .doc(uid)
+        .get();
+    final data = doc.data() ?? {};
+    selectedFaculty = data['faculty'];
+    int? selectedAcademicYear = data['academicYear'];
+    final nameController = TextEditingController(
+      text: data['fullName'] ?? user?.displayName ?? "",
+    );
+    final emailController = TextEditingController(text: user?.email ?? "");
+    final majorController = TextEditingController(text: data['major'] ?? "");
+    final minorController = TextEditingController(text: data['minor'] ?? "");
+    final cgpaController = TextEditingController(text: data['cgpa'] ?.toString() ?? "");
+    final skillSearchController = TextEditingController();
+    List<String> filteredSkills = allSkills;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
           builder: (context, setDialogState) {
-          return AlertDialog(
-            title: const Text("Complete Your Profile"),
-            content: SingleChildScrollView(
-              child: Column(
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: "Full Name"),
-                  ),
-                  TextField(
-                    controller: emailController,
-                    enabled: false,
-                    decoration: const InputDecoration(labelText: "Email"),
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: selectedFaculty,
-                    decoration: const InputDecoration(
-                      labelText: "Faculty",
+            return AlertDialog(
+              title: const Text("Complete Your Profile"),
+              content: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: "Full Name"),
                     ),
-                    items: faculties.map((faculty) {
-                      return DropdownMenuItem(
-                        value: faculty,
-                        child: Text(faculty),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedFaculty = value;
-                      });
-                    },
-                  ),
-                  TextField(
-                    controller: majorController,
-                    decoration: const InputDecoration(labelText: "Major"),
-                  ),
-                  TextField(
-                    controller: minorController,
-                    decoration: const InputDecoration(
-                      labelText: "Minor (Optional)",
+                    TextField(
+                      controller: emailController,
+                      enabled: false,
+                      decoration: const InputDecoration(labelText: "Email"),
                     ),
-                  ),
-                  DropdownButtonFormField<int>(
-                    value: selectedAcademicYear,
-                    decoration: const InputDecoration(
-                      labelText: "Academic Year",
+                    DropdownButtonFormField<String>(
+                      value: selectedFaculty,
+                      decoration: const InputDecoration(labelText: "Faculty"),
+                      items: faculties.map((faculty) {
+                        return DropdownMenuItem(
+                          value: faculty,
+                          child: Text(faculty),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedFaculty = value;
+                        });
+                      },
                     ),
-                    items: academicYears.map((year) {
-                      return DropdownMenuItem(
-                        value: year,
-                        child: Text(
-                          year == 1
-                              ? "First Year"
-                              : year == 2
-                                  ? "Second Year"
-                                  : year == 3
-                                      ? "Third Year"
-                                      : year == 4
-                                          ? "Fourth Year"
-                                          : "Fifth Year",
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setDialogState(() {
-                        selectedAcademicYear = value;
-                      });
-                    },
-                  ),
+                    TextField(
+                      controller: majorController,
+                      decoration: const InputDecoration(labelText: "Major"),
+                    ),
+                    TextField(
+                      controller: minorController,
+                      decoration: const InputDecoration(
+                        labelText: "Minor (Optional)",
+                      ),
+                    ),
+                    DropdownButtonFormField<int>(
+                      value: selectedAcademicYear,
+                      decoration: const InputDecoration(
+                        labelText: "Academic Year",
+                      ),
+                      items: academicYears.map((year) {
+                        return DropdownMenuItem(
+                          value: year,
+                          child: Text(
+                            year == 1
+                                ? "First Year"
+                                : year == 2
+                                ? "Second Year"
+                                : year == 3
+                                ? "Third Year"
+                                : year == 4
+                                ? "Fourth Year"
+                                : "Fifth Year",
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedAcademicYear = value;
+                        });
+                      },
+                    ),
 
                     TextField(
                       controller: cgpaController,
@@ -498,296 +613,269 @@ class _AccountPageState extends State<AccountPage> {
                         hintText: "e.g. 3.75",
                       ),
                     ),
+
+                    const SizedBox(height: 16),
+
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Club Memberships (Optional)",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _clubNames.map((club) {
+                        final isSelected = _selectedClubs.contains(club);
+
+                        return GestureDetector(
+                          onTap: () {
+                            setDialogState(() {
+                              if (isSelected) {
+                                _selectedClubs.remove(club);
+                              } else {
+                                _selectedClubs.add(club);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xffb1170c)
+                                  : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              club,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Skills (Optional)",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
                     TextField(
-                      controller: descriptionController,
-                      maxLines: 3,
+                      controller: skillSearchController,
                       decoration: const InputDecoration(
-                        labelText: "Description",
+                        hintText: "Search skills...",
+                        prefixIcon: Icon(Icons.search),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          filteredSkills = allSkills
+                              .where(
+                                (skill) => skill.toLowerCase().contains(
+                                  value.toLowerCase(),
+                                ),
+                              )
+                              .toList();
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: filteredSkills.map((skill) {
+                        final isSelected = _selectedSkills.contains(skill);
+
+                        return GestureDetector(
+                          onTap: () {
+                            setDialogState(() {
+                              if (isSelected) {
+                                _selectedSkills.remove(skill);
+                              } else {
+                                _selectedSkills.add(skill);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xffb1170c)
+                                  : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              skill,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Interests",
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 10),
 
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Club Memberships (Optional)",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: "Type interest and press enter",
                       ),
-                    ),
-                  ),
+                      onSubmitted: (value) {
+                        final trimmed = value.trim();
 
-                  const SizedBox(height: 10),
+                        if (trimmed.isEmpty) return;
 
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _clubNames.map((club) {
-                      final isSelected =
-                          _selectedClubs.contains(club);
-
-                      return GestureDetector(
-                        onTap: () {
+                        if (!_selectedInterests.contains(trimmed)) {
                           setDialogState(() {
-                            if (isSelected) {
-                              _selectedClubs.remove(club);
-                            } else {
-                              _selectedClubs.add(club);
-                            }
+                            _selectedInterests.add(trimmed);
                           });
-                        },
-                        child: Container(
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _selectedInterests.map((interest) {
+                        return Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xffb1170c)
-                                : Colors.grey[200],
+                            color: const Color(0xffb1170c),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            club,
-                            style: TextStyle(
-                              color:
-                                  isSelected ? Colors.white : Colors.black,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                interest,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+
+                              const SizedBox(width: 6),
+
+                              GestureDetector(
+                                onTap: () {
+                                  setDialogState(() {
+                                    _selectedInterests.remove(interest);
+                                  });
+                                },
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () async {
+                    if (selectedFaculty == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Please select a faculty"),
                         ),
                       );
-                    }).toList(),
-                  ),
-const SizedBox(height: 20),
-
-const Align(
-  alignment: Alignment.centerLeft,
-  child: Text(
-    "Skills (Optional)",
-    style: TextStyle(
-      fontWeight: FontWeight.bold,
-    ),
-  ),
-),
-
-const SizedBox(height: 10),
-
-TextField(
-  controller: skillSearchController,
-  decoration: const InputDecoration(
-    hintText: "Search skills...",
-    prefixIcon: Icon(Icons.search),
-  ),
-  onChanged: (value) {
-    setDialogState(() {
-      filteredSkills = allSkills
-          .where(
-            (skill) => skill
-                .toLowerCase()
-                .contains(value.toLowerCase()),
-          )
-          .toList();
-    });
-  },
-),
-    const SizedBox(height: 10),
-
-    Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: filteredSkills.map((skill) {
-        final isSelected =
-            _selectedSkills.contains(skill);
-
-        return GestureDetector(
-          onTap: () {
-            setDialogState(() {
-              if (isSelected) {
-                _selectedSkills.remove(skill);
-              } else {
-                _selectedSkills.add(skill);
-              }
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xffb1170c)
-                  : Colors.grey[200],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              skill,
-              style: TextStyle(
-                color:
-                    isSelected ? Colors.white : Colors.black,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    ),
-    const SizedBox(height: 20),
-
-    const Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        "Interests",
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    ),
-
-    const SizedBox(height: 10),
-
-    TextField(
-      decoration: const InputDecoration(
-        hintText: "Type interest and press enter",
-      ),
-      onSubmitted: (value) {
-        final trimmed = value.trim();
-
-        if (trimmed.isEmpty) return;
-
-        if (!_selectedInterests.contains(trimmed)) {
-          setDialogState(() {
-            _selectedInterests.add(trimmed);
-          });
-        }
-      },
-    ),
-
-    const SizedBox(height: 10),
-
-    Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: _selectedInterests.map((interest) {
-        return Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
-          decoration: BoxDecoration(
-            color: const Color(0xffb1170c),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                interest,
-                style: const TextStyle(
-                  color: Colors.white,
-                ),
-              ),
-
-              const SizedBox(width: 6),
-
-              GestureDetector(
-                onTap: () {
-                  setDialogState(() {
-                    _selectedInterests.remove(interest);
-                  });
-                },
-                child: const Icon(
-                  Icons.close,
-                  size: 18,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    ),    
-                ],
-              ),
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () async {
-                  if (selectedFaculty == null){
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Please select a faculty"),
-                      ),
-                    );
-                    return;
-                  }
-                  if (selectedAcademicYear == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Please select academic year",
+                      return;
+                    }
+                    if (selectedAcademicYear == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Please select academic year"),
                         ),
-                      ),
-                    );
-                    return;
-                  }
+                      );
+                      return;
+                    }
 
-                  final cgpa =
-                      double.tryParse(cgpaController.text);
+                    final cgpa = double.tryParse(cgpaController.text);
 
-                  if (cgpa == null || cgpa < 0 || cgpa > 4) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("CGPA must be between 0 and 4"),
-                      ),
-                    );
-                    return;
-                  }
+                    if (cgpa == null || cgpa < 0 || cgpa > 4) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("CGPA must be between 0 and 4"),
+                        ),
+                      );
+                      return;
+                    }
 
-                  await FirebaseFirestore.instance
-                      .collection(usersCollection)
-                      .doc(uid)
-                      .set({
-                        "firstName":
-                            nameController.text.trim().split(" ").first,
+                    await FirebaseFirestore.instance
+                        .collection(usersCollection)
+                        .doc(uid)
+                        .set({
+                          "firstName": nameController.text
+                              .trim()
+                              .split(" ")
+                              .first,
 
-                        "lastName":
-                            nameController.text.trim().split(" ").length > 1
-                                ? nameController.text
+                          "lastName":
+                              nameController.text.trim().split(" ").length > 1
+                              ? nameController.text
                                     .trim()
                                     .split(" ")
                                     .sublist(1)
                                     .join(" ")
-                                : "",
-                        "fullName": nameController.text.trim(),        
-                        "email": emailController.text,
-                        "faculty": selectedFaculty,
-                        "academicYear": selectedAcademicYear,
-                        "major": majorController.text.trim(),
-                        "minor": minorController.text.trim(),
-                        "cgpa": cgpaController.text.trim(),
-                        "clubs": _selectedClubs.toList(),
-                        "interests": _selectedInterests,
-                        "profileCompleted": true,
-                        "updatedAt": FieldValue.serverTimestamp(),
-                        "description":
-                          descriptionController.text.trim(),                                        
-                  }, SetOptions(merge: true));
-                  await FirebaseFirestore.instance
-                      .collection(skillsCollection)
-                      .doc(uid)
-                      .set({
-                    "skills": _selectedSkills.toList(),
-                  }, SetOptions(merge: true));
-                  Navigator.pop(context);
+                              : "",
+                          "fullName": nameController.text.trim(),
+                          "email": emailController.text,
+                          "faculty": selectedFaculty,
+                          "academicYear": selectedAcademicYear,
+                          "major": majorController.text.trim(),
+                          "minor": minorController.text.trim(),
+                          "cgpa": cgpa,
+                          "clubs": _selectedClubs.toList(),
+                          "skills": _selectedSkills.toList(),
+                          "interests": _selectedInterests,
+                          "profileCompleted": true,
+                          "updatedAt": FieldValue.serverTimestamp(),
+                        }, SetOptions(merge: true));
+                    Navigator.pop(context);
 
-                  setState(() {
-                    _profileFuture = _fetchFullProfile();
-                  });
-                },
-                child: const Text("Save"),
-              )
-            ],
+                    setState(() {
+                      _profileFuture = _fetchFullProfile();
+                    });
+                  },
+                  child: const Text("Save"),
+                ),
+              ],
             );
           },
         );
@@ -795,7 +883,7 @@ TextField(
     );
   }
 
-// save updated profile + convert selected skills to list for Firestore
+  // save updated profile + convert selected skills to list for Firestore
 
   Future<void> _loadSkills() async {
     final snapshot = await FirebaseFirestore.instance
@@ -803,21 +891,15 @@ TextField(
         .get();
 
     setState(() {
-      allSkills = snapshot.docs
-          .map((doc) => doc['name'].toString())
-          .toList();
+      allSkills = snapshot.docs.map((doc) => doc['name'].toString()).toList();
     });
   }
 
   Future<void> _loadClubs() async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('Clubs')
-        .get();
+    final snapshot = await FirebaseFirestore.instance.collection('Clubs').get();
 
     setState(() {
-      _clubNames = snapshot.docs
-          .map((doc) => doc['name'].toString())
-          .toList();
+      _clubNames = snapshot.docs.map((doc) => doc['name'].toString()).toList();
     });
   }
 
@@ -826,34 +908,24 @@ TextField(
     return FutureBuilder<Map<String, dynamic>>(
       future: _profileFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState ==
-            ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(
-              child: LoadingIndicator(),
-            ),
-          );
-        }       
-      
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: LoadingIndicator()));
+        }
+
         if (!snapshot.hasData || snapshot.data!["info"] == null) {
-          return const Scaffold(
-            body: Center(child: Text("No profile found")),
-          );
+          return const Scaffold(body: Center(child: Text("No profile found")));
         }
 
         final info = snapshot.data!["info"];
-        final fullName =
-            "${info['firstName'] ?? ''} ${info['lastName'] ?? ''}";
+        final fullName = "${info['firstName'] ?? ''} ${info['lastName'] ?? ''}";
 
         return Scaffold(
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-
                 // profile card
                 Container(
-
                   width: double.infinity,
 
                   padding: const EdgeInsets.all(20),
@@ -872,45 +944,32 @@ TextField(
                   ),
 
                   child: Column(
-
                     children: [
-
                       Stack(
-
                         children: [
-                          
                           CircleAvatar(
                             radius: 55,
-                            backgroundColor:
-                                const Color(0xffb1170c),
+                            backgroundColor: const Color(0xffb1170c),
                             backgroundImage:
                                 info['profileImage'] != null &&
-                                        info['profileImage']
-                                            .toString()
-                                            .isNotEmpty
-                                    ? NetworkImage(
-                                        "${info['profileImage']}?v=${DateTime.now().millisecondsSinceEpoch}",
-                                      )
-                                    : null,
+                                    info['profileImage'].toString().isNotEmpty
+                                ? NetworkImage(info['profileImage'])
+                                : null,
                             child:
                                 info['profileImage'] == null ||
-                                        info['profileImage']
-                                            .toString()
-                                            .isEmpty
-                                    ? Text(
-                                        fullName.isNotEmpty
-                                            ? fullName[0]
-                                                .toUpperCase()
-                                            : "?",
-                                        style: const TextStyle(
-                                          fontSize: 40,
-                                          color: Colors.white,
-                                          fontWeight:
-                                              FontWeight.bold,
-                                        ),
-                                      )
-                                    : null,
-                          ),                        
+                                    info['profileImage'].toString().isEmpty
+                                ? Text(
+                                    fullName.isNotEmpty
+                                        ? fullName[0].toUpperCase()
+                                        : "?",
+                                    style: const TextStyle(
+                                      fontSize: 40,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : null,
+                          ),
                           Positioned(
                             bottom: 0,
                             right: 0,
@@ -921,7 +980,7 @@ TextField(
                               ),
                               child: IconButton(
                                 onPressed: () {
-                                    _uploadProfileImage();
+                                  _uploadProfileImage();
                                 },
 
                                 icon: const Icon(
@@ -956,23 +1015,6 @@ TextField(
                           fontSize: 15,
                         ),
                       ),
-
-                      const SizedBox(height: 16),
-
-                      if ((info['description'] ?? "")
-                          .toString()
-                          .isNotEmpty)
-
-                        Text(
-                          info['description'],
-
-                          textAlign: TextAlign.center,
-
-                          style: const TextStyle(
-                            fontSize: 15,
-                            height: 1.4,
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -981,7 +1023,6 @@ TextField(
 
                 // academic info card
                 Container(
-
                   width: double.infinity,
 
                   padding: const EdgeInsets.all(18),
@@ -1000,12 +1041,9 @@ TextField(
                   ),
 
                   child: Column(
-
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
                     children: [
-
                       const Text(
                         "Academic Information",
 
@@ -1054,7 +1092,6 @@ TextField(
                             ? "${info['academicYear']}"
                             : 'Not set',
                       ),
-
                     ],
                   ),
                 ),
@@ -1063,7 +1100,6 @@ TextField(
 
                 // clubs card
                 Container(
-
                   width: double.infinity,
 
                   padding: const EdgeInsets.all(18),
@@ -1082,12 +1118,9 @@ TextField(
                   ),
 
                   child: Column(
-
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
 
                     children: [
-
                       const Text(
                         "Club Memberships",
 
@@ -1103,37 +1136,28 @@ TextField(
                         spacing: 8,
                         runSpacing: 8,
 
-                        children:
-                            ((info['clubs'] as List?) ?? [])
-                                .map(
-                                  (club) => Container(
+                        children: ((info['clubs'] as List?) ?? [])
+                            .map(
+                              (club) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 8,
+                                ),
 
-                                    padding:
-                                        const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
-                                    ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xffb1170c),
 
-                                    decoration: BoxDecoration(
-                                      color:
-                                          const Color(0xffb1170c),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
 
-                                      borderRadius:
-                                          BorderRadius.circular(
-                                        20,
-                                      ),
-                                    ),
+                                child: Text(
+                                  club.toString(),
 
-                                    child: Text(
-                                      club.toString(),
-
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            )
+                            .toList(),
                       ),
                     ],
                   ),
@@ -1142,12 +1166,8 @@ TextField(
                 const SizedBox(height: 20),
 
                 // interests
-                if ((info['interests'] as List?)
-                        ?.isNotEmpty ??
-                    false)
-
+                if ((info['interests'] as List?)?.isNotEmpty ?? false)
                   Container(
-
                     width: double.infinity,
 
                     padding: const EdgeInsets.all(18),
@@ -1155,32 +1175,26 @@ TextField(
                     decoration: BoxDecoration(
                       color: Colors.white,
 
-                      borderRadius:
-                          BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(20),
 
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              Colors.black.withOpacity(0.05),
+                          color: Colors.black.withOpacity(0.05),
                           blurRadius: 10,
                         ),
                       ],
                     ),
 
                     child: Column(
-
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
 
                       children: [
-
                         const Text(
                           "Interests",
 
                           style: TextStyle(
                             fontSize: 18,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
 
@@ -1190,32 +1204,24 @@ TextField(
                           spacing: 8,
                           runSpacing: 8,
 
-                          children:
-                              (info['interests'] as List)
-                                  .map(
-                                    (interest) => Container(
+                          children: (info['interests'] as List)
+                              .map(
+                                (interest) => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
 
-                                      padding:
-                                          const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 8,
-                                      ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
 
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
 
-                                        borderRadius:
-                                            BorderRadius.circular(
-                                          20,
-                                        ),
-                                      ),
-
-                                      child: Text(
-                                        interest.toString(),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
+                                  child: Text(interest.toString()),
+                                ),
+                              )
+                              .toList(),
                         ),
                       ],
                     ),
@@ -1228,16 +1234,11 @@ TextField(
                   height: 52,
 
                   child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xffb1170c),
 
-                    style:
-                        ElevatedButton.styleFrom(
-                      backgroundColor:
-                          const Color(0xffb1170c),
-
-                      shape:
-                          RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
 
@@ -1245,10 +1246,7 @@ TextField(
                       _showEditProfileDialog();
                     },
 
-                    icon: const Icon(
-                      Icons.edit,
-                      color: Colors.white,
-                    ),
+                    icon: const Icon(Icons.edit, color: Colors.white),
 
                     label: const Text(
                       "Edit Profile",
@@ -1260,7 +1258,7 @@ TextField(
                       ),
                     ),
                   ),
-                ),              
+                ),
 
                 const SizedBox(height: 10),
 
@@ -1278,64 +1276,60 @@ TextField(
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const SettingsPage(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const SettingsPage()),
                       );
                     },
                   ),
                 ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.logout),
-                      label: const Text("Log Out"),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.logout),
+                    label: const Text("Log Out"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      onPressed: () async {
-                        final shouldLogout = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text("Log Out"),
-                            content: const Text(
-                              "Are you sure you want to log out?",
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(context, false),
-                                child: const Text("Cancel"),
-                              ),
-                              ElevatedButton(
-                                onPressed: () =>
-                                    Navigator.pop(context, true),
-                                child: const Text("Log Out"),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (shouldLogout == true) {
-                          await FirebaseAuth.instance.signOut();
-                          if (context.mounted) {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LoginScreen(),
-                              ),
-                              (route) => false,
-                            );
-                          }
-                        }
-                      },
                     ),
-                  ),            
+                    onPressed: () async {
+                      final shouldLogout = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text("Log Out"),
+                          content: const Text(
+                            "Are you sure you want to log out?",
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text("Cancel"),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text("Log Out"),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (shouldLogout == true) {
+                        await FirebaseAuth.instance.signOut();
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ),
               ],
             ),
           ),
@@ -1343,105 +1337,62 @@ TextField(
       },
     );
   }
-    Future<void> _uploadProfileImage() async {
-      try {
-        final picker = ImagePicker();
-        final pickedFile =
-            await picker.pickImage(
-          source: ImageSource.gallery,
-          imageQuality: 70,
-        );
-        if (pickedFile == null) return;
-        final bytes =
-            await pickedFile.readAsBytes();
 
-        final ref = FirebaseStorage.instance
-            .ref()
-            .child(
-              'profile_images/$uid.jpg',
-            );
-        await ref.putData(bytes);
-        final imageUrl =
-            await ref.getDownloadURL();
-
-        await FirebaseFirestore.instance
-            .collection(usersCollection)
-            .doc(uid)
-            .set({
-          'profileImage': imageUrl,
-        }, SetOptions(merge: true));              
-        final refreshedProfile =
-            await _fetchFullProfile();
-        setState(() {
-          _profileFuture =
-              Future.value(
-                refreshedProfile,
-              );
-        });       
-        if (context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(
-
-            const SnackBar(
-              content: Text(
-                "Profile image updated",
-              ),
-            ),
-          );
-        }
-
-      } catch (e) {
-
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
-
-          SnackBar(
-            content: Text(
-              "Upload failed: $e",
-            ),
-          ),
-        );
-      }
-    } 
- 
-    Widget _buildInfoRow(
-      IconData icon,
-      String title,
-      String value,
-    ) {
-
-      return Row(
-
-        children: [
-
-          Icon(
-            icon,
-            color: const Color(0xffb1170c),
-          ),
-
-          const SizedBox(width: 12),
-
-          Text(
-            "$title: ",
-
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          Expanded(
-            child: Text(value),
-          ),
-        ],
+  Future<void> _uploadProfileImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
       );
+      if (pickedFile == null) return;
+      final bytes = await pickedFile.readAsBytes();
+
+      final ref = FirebaseStorage.instance.ref().child(
+        'profile_images/$uid.jpg',
+      );
+      await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+      final imageUrl = await ref.getDownloadURL();
+
+      await FirebaseFirestore.instance.collection(usersCollection).doc(uid).set(
+        {'profileImage': imageUrl},
+        SetOptions(merge: true),
+      );
+      setState(() {
+        _profileFuture = _fetchFullProfile();
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Profile image updated")));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Upload failed: $e")));
     }
+  }
+
+  Widget _buildInfoRow(IconData icon, String title, dynamic value) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xffb1170c)),
+
+        const SizedBox(width: 12),
+
+        Text("$title: ", style: const TextStyle(fontWeight: FontWeight.bold)),
+
+        Expanded(child: Text(value?.toString() ?? '')),
+      ],
+    );
+  }
 
   Widget _buildButtons() {
     return ElevatedButton(
-        onPressed: () {
-          _showEditProfileDialog();
-        },
-        child: const Text("Edit Profile"),
-      );  
+      onPressed: () {
+        _showEditProfileDialog();
+      },
+      child: const Text("Edit Profile"),
+    );
   }
 }

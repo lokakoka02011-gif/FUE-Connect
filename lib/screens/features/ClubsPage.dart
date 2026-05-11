@@ -246,8 +246,7 @@ class _ClubsPageState extends State<ClubsPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => ClubPostsPage(
-                        clubId: clubId,
+                      builder: (_) => PostsPage(
                         clubName: data['name'] ?? 'Club',
                       ),
                     ),
