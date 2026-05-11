@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fue_connect/screens/features/ClubPostsPage.dart';
+import 'package:fue_connect/screens/features/PostsPage.dart';
 import 'package:fue_connect/widgets/filter_pills.dart';
 import 'package:fue_connect/widgets/loading_indicator.dart';
 import 'package:fue_connect/screens/features/formsPage.dart';
