@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:html' as html;
 import 'package:flutter/foundation.dart';
+import 'package:fue_connect/widgets/loading_indicator.dart';
 
 class FormsPage extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -112,6 +113,7 @@ class _FormsPageState extends State<FormsPage> {
 
       await FirebaseFirestore.instance.collection('applications').add({
         'userId': user.uid,
+        'companyId': widget.data['createdBy'] ?? '',
         'userName': userName,
         'studentId': studentId,
         'email': email,
@@ -250,7 +252,7 @@ class _FormsPageState extends State<FormsPage> {
                     ),
                     onPressed: _isSubmitting ? null : _submitApplication,
                     child: _isSubmitting
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const LoadingIndicator()
                         : const Text(
                             "Submit Application",
                             style: TextStyle(color: Colors.white),

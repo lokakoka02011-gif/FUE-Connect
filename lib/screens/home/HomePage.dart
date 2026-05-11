@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fue_connect/widgets/loading_indicator.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -142,7 +143,7 @@ SizedBox(
                 stream: _postsStream,
                 builder: (context, snapshot) {
                   if (snapshot.hasError) return const Center(child: Text("Error loading posts"));
-                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: LoadingIndicator());
 
                   final docs = snapshot.data!.docs;
                   if (docs.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("No posts yet.")));

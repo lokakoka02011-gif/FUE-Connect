@@ -5,7 +5,8 @@ import 'package:fue_connect/widgets/loading_indicator.dart';
 import 'package:flutter/services.dart';
 import 'package:fue_connect/screens/auth/login_screen.dart';
 import 'package:fue_connect/screens/features/settings_page.dart';
-
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
 
@@ -33,6 +34,9 @@ class _AccountPageState extends State<AccountPage> {
     "Computer Science",
   ];
   List<String> allSkills = [];
+  final List<int> academicYears = [
+    1, 2, 3, 4, 5
+  ];
 
   final String usersCollection = "users";
   final String skillsCollection = "student_skills";
@@ -113,16 +117,33 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
-  void _showFirstTimeDialog() {
+  Future<void> _showFirstTimeDialog() async {
     final user = FirebaseAuth.instance.currentUser;
     selectedFaculty = null;
+    final doc = await FirebaseFirestore.instance
+        .collection(usersCollection)
+        .doc(uid)
+        .get();
+
+    final data = doc.data() ?? {};
+
     final nameController =
-        TextEditingController(text: user?.displayName ?? "");
-    final emailController =
-        TextEditingController(text: user?.email ?? "");
+        TextEditingController(
+          text:
+              data['fullName'] ??
+              '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}',
+        );    final emailController = TextEditingController(text: user?.email ?? "");
     final majorController = TextEditingController();
     final minorController = TextEditingController();
     final cgpaController = TextEditingController();
+    final phoneController = TextEditingController(
+      text: data['phoneNumber'] ?? "",
+    );
+    final personalEmailController = TextEditingController(
+      text: data['personalEmail'] ?? "",
+    );
+    int? selectedAcademicYear =
+        data['academicYear'];
     
     showDialog(
       context: context,
@@ -186,6 +207,49 @@ class _AccountPageState extends State<AccountPage> {
                           hintText: "e.g. 3.75",
                         ),
                       ),
+                      TextField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(
+                          labelText: "Phone Number",
+                        ),
+                      ),
+
+                    DropdownButtonFormField<int>(
+                      value: selectedAcademicYear,
+                      decoration: const InputDecoration(
+                        labelText: "Academic Year",
+                      ),
+                      items: academicYears.map((year) {
+                        return DropdownMenuItem(
+                          value: year,
+                          child: Text(
+                            year == 1
+                                ? "First Year"
+                                : year == 2
+                                    ? "Second Year"
+                                    : year == 3
+                                        ? "Third Year"
+                                        : year == 4
+                                            ? "Fourth Year"
+                                            : "Fifth Year",
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          selectedAcademicYear = value;
+                        });
+                      },
+                    ),
+                    TextField(
+                      controller: personalEmailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: "Personal Email",
+                        hintText: "example@gmail.com",
+                      ),
+                    ),
 
                 const SizedBox(height: 16),
 
@@ -283,21 +347,16 @@ class _AccountPageState extends State<AccountPage> {
                           : "",
 
                   "fullName": nameController.text.trim(),
-
                   "email": emailController.text,
-
                   "faculty": selectedFaculty,
-
+                  "academicYear": selectedAcademicYear,
+                  "phoneNumber": phoneController.text.trim(),
+                  "personalEmail": personalEmailController.text.trim(),
                   "major": majorController.text.trim(),
-
                   "minor": minorController.text.trim(),
-
                   "cgpa": cgpaController.text.trim(),
-
                   "clubs": _selectedClubs.toList(),
-
                   "profileCompleted": true,
-
                   "updatedAt": FieldValue.serverTimestamp(),
                 }, SetOptions(merge: true));
 
@@ -326,6 +385,7 @@ class _AccountPageState extends State<AccountPage> {
           .get();
       final data = doc.data() ?? {};
       selectedFaculty = data['faculty'];
+      int? selectedAcademicYear = data['academicYear'];
       final nameController =
           TextEditingController(
             text: data['fullName'] ?? user?.displayName ?? "",
@@ -395,6 +455,34 @@ class _AccountPageState extends State<AccountPage> {
                       labelText: "Minor (Optional)",
                     ),
                   ),
+                  DropdownButtonFormField<int>(
+                    value: selectedAcademicYear,
+                    decoration: const InputDecoration(
+                      labelText: "Academic Year",
+                    ),
+                    items: academicYears.map((year) {
+                      return DropdownMenuItem(
+                        value: year,
+                        child: Text(
+                          year == 1
+                              ? "First Year"
+                              : year == 2
+                                  ? "Second Year"
+                                  : year == 3
+                                      ? "Third Year"
+                                      : year == 4
+                                          ? "Fourth Year"
+                                          : "Fifth Year",
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedAcademicYear = value;
+                      });
+                    },
+                  ),
+
                     TextField(
                       controller: cgpaController,
                       keyboardType: const TextInputType.numberWithOptions(
@@ -625,7 +713,7 @@ TextField(
             actions: [
               ElevatedButton(
                 onPressed: () async {
-                  if (selectedFaculty == null) {
+                  if (selectedFaculty == null){
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text("Please select a faculty"),
@@ -633,6 +721,17 @@ TextField(
                     );
                     return;
                   }
+                  if (selectedAcademicYear == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Please select academic year",
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+
                   final cgpa =
                       double.tryParse(cgpaController.text);
 
@@ -663,6 +762,7 @@ TextField(
                         "fullName": nameController.text.trim(),        
                         "email": emailController.text,
                         "faculty": selectedFaculty,
+                        "academicYear": selectedAcademicYear,
                         "major": majorController.text.trim(),
                         "minor": minorController.text.trim(),
                         "cgpa": cgpaController.text.trim(),
@@ -750,79 +850,283 @@ TextField(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                const CircleAvatar(
-                  radius: 50,
-                  backgroundColor: Color(0xffb1170c),
-                  child: Icon(Icons.person, size: 50, color: Colors.white),
-                ),
-                const SizedBox(height: 15),
-                Text(fullName,
-                    style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.bold)),
-                Text(info['email'] ?? "",
-                    style: const TextStyle(color: Colors.grey)),
-                const SizedBox(height: 10),
 
-                Text(
-                  "Faculty: ${info['faculty'] ?? 'Not set'}",
-                ),
+                // profile card
+                Container(
 
-                Text(
-                  "Major: ${info['major'] ?? 'Not set'}",
-                ),
+                  width: double.infinity,
 
-                Text(
-                  "Minor: ${info['minor'] ?? 'None'}",
-                ),
-                Text(
-                  "CGPA: ${info['cgpa'] ?? 'Not set'}",
-                ),
-                const SizedBox(height: 8),
+                  padding: const EdgeInsets.all(20),
 
-                Text(
-                  "Clubs: ${(info['clubs'] as List?)?.join(', ') ?? 'None'}",
-                ),
-                const SizedBox(height: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
 
-                Text(
-                  info['description'] ?? "",
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                if ((info['interests'] as List?)?.isNotEmpty ?? false)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    borderRadius: BorderRadius.circular(20),
+
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+
+                  child: Column(
+
                     children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "Interests",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+
+                      Stack(
+
+                        children: [
+                          
+                          CircleAvatar(
+                            radius: 55,
+                            backgroundColor:
+                                const Color(0xffb1170c),
+                            backgroundImage:
+                                info['profileImage'] != null &&
+                                        info['profileImage']
+                                            .toString()
+                                            .isNotEmpty
+                                    ? NetworkImage(
+                                        "${info['profileImage']}?v=${DateTime.now().millisecondsSinceEpoch}",
+                                      )
+                                    : null,
+                            child:
+                                info['profileImage'] == null ||
+                                        info['profileImage']
+                                            .toString()
+                                            .isEmpty
+                                    ? Text(
+                                        fullName.isNotEmpty
+                                            ? fullName[0]
+                                                .toUpperCase()
+                                            : "?",
+                                        style: const TextStyle(
+                                          fontSize: 40,
+                                          color: Colors.white,
+                                          fontWeight:
+                                              FontWeight.bold,
+                                        ),
+                                      )
+                                    : null,
+                          ),                        
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xffb1170c),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: IconButton(
+                                onPressed: () {
+                                    _uploadProfileImage();
+                                },
+
+                                icon: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
                           ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 18),
+
+                      Text(
+                        fullName,
+
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
 
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 6),
+
+                      Text(
+                        info['email'] ?? "",
+
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 15,
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      if ((info['description'] ?? "")
+                          .toString()
+                          .isNotEmpty)
+
+                        Text(
+                          info['description'],
+
+                          textAlign: TextAlign.center,
+
+                          style: const TextStyle(
+                            fontSize: 15,
+                            height: 1.4,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // academic info card
+                Container(
+
+                  width: double.infinity,
+
+                  padding: const EdgeInsets.all(18),
+
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+
+                    borderRadius: BorderRadius.circular(20),
+
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+
+                  child: Column(
+
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+
+                    children: [
+
+                      const Text(
+                        "Academic Information",
+
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      _buildInfoRow(
+                        Icons.school,
+                        "Faculty",
+                        info['faculty'] ?? 'Not set',
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      _buildInfoRow(
+                        Icons.menu_book,
+                        "Major",
+                        info['major'] ?? 'Not set',
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      _buildInfoRow(
+                        Icons.bookmark,
+                        "Minor",
+                        info['minor'] ?? 'None',
+                      ),
+
+                      const SizedBox(height: 12),
+                      _buildInfoRow(
+                        Icons.star,
+                        "CGPA",
+                        info['cgpa'] ?? 'Not set',
+                      ),
+
+                      const SizedBox(height: 12),
+                      _buildInfoRow(
+                        Icons.calendar_today,
+                        "Academic Year",
+                        info['academicYear'] != null
+                            ? "${info['academicYear']}"
+                            : 'Not set',
+                      ),
+
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // clubs card
+                Container(
+
+                  width: double.infinity,
+
+                  padding: const EdgeInsets.all(18),
+
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+
+                    borderRadius: BorderRadius.circular(20),
+
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+
+                  child: Column(
+
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+
+                    children: [
+
+                      const Text(
+                        "Club Memberships",
+
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
 
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
+
                         children:
-                            (info['interests'] as List)
+                            ((info['clubs'] as List?) ?? [])
                                 .map(
-                                  (interest) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
+                                  (club) => Container(
+
+                                    padding:
+                                        const EdgeInsets.symmetric(
+                                      horizontal: 14,
                                       vertical: 8,
                                     ),
+
                                     decoration: BoxDecoration(
-                                      color: const Color(0xffb1170c),
-                                      borderRadius: BorderRadius.circular(20),
+                                      color:
+                                          const Color(0xffb1170c),
+
+                                      borderRadius:
+                                          BorderRadius.circular(
+                                        20,
+                                      ),
                                     ),
+
                                     child: Text(
-                                      interest.toString(),
+                                      club.toString(),
+
                                       style: const TextStyle(
                                         color: Colors.white,
                                       ),
@@ -831,14 +1135,133 @@ TextField(
                                 )
                                 .toList(),
                       ),
-
-                      const SizedBox(height: 20),
                     ],
                   ),
+                ),
 
-            
+                const SizedBox(height: 20),
 
-                _buildButtons(),
+                // interests
+                if ((info['interests'] as List?)
+                        ?.isNotEmpty ??
+                    false)
+
+                  Container(
+
+                    width: double.infinity,
+
+                    padding: const EdgeInsets.all(18),
+
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+
+                      borderRadius:
+                          BorderRadius.circular(20),
+
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+
+                    child: Column(
+
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+
+                      children: [
+
+                        const Text(
+                          "Interests",
+
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight:
+                                FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+
+                          children:
+                              (info['interests'] as List)
+                                  .map(
+                                    (interest) => Container(
+
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 8,
+                                      ),
+
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[200],
+
+                                        borderRadius:
+                                            BorderRadius.circular(
+                                          20,
+                                        ),
+                                      ),
+
+                                      child: Text(
+                                        interest.toString(),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+
+                  child: ElevatedButton.icon(
+
+                    style:
+                        ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color(0xffb1170c),
+
+                      shape:
+                          RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(14),
+                      ),
+                    ),
+
+                    onPressed: () {
+                      _showEditProfileDialog();
+                    },
+
+                    icon: const Icon(
+                      Icons.edit,
+                      color: Colors.white,
+                    ),
+
+                    label: const Text(
+                      "Edit Profile",
+
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),              
+
                 const SizedBox(height: 10),
 
                 SizedBox(
@@ -920,6 +1343,98 @@ TextField(
       },
     );
   }
+    Future<void> _uploadProfileImage() async {
+      try {
+        final picker = ImagePicker();
+        final pickedFile =
+            await picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 70,
+        );
+        if (pickedFile == null) return;
+        final bytes =
+            await pickedFile.readAsBytes();
+
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child(
+              'profile_images/$uid.jpg',
+            );
+        await ref.putData(bytes);
+        final imageUrl =
+            await ref.getDownloadURL();
+
+        await FirebaseFirestore.instance
+            .collection(usersCollection)
+            .doc(uid)
+            .set({
+          'profileImage': imageUrl,
+        }, SetOptions(merge: true));              
+        final refreshedProfile =
+            await _fetchFullProfile();
+        setState(() {
+          _profileFuture =
+              Future.value(
+                refreshedProfile,
+              );
+        });       
+        if (context.mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(
+
+            const SnackBar(
+              content: Text(
+                "Profile image updated",
+              ),
+            ),
+          );
+        }
+
+      } catch (e) {
+
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
+
+          SnackBar(
+            content: Text(
+              "Upload failed: $e",
+            ),
+          ),
+        );
+      }
+    } 
+ 
+    Widget _buildInfoRow(
+      IconData icon,
+      String title,
+      String value,
+    ) {
+
+      return Row(
+
+        children: [
+
+          Icon(
+            icon,
+            color: const Color(0xffb1170c),
+          ),
+
+          const SizedBox(width: 12),
+
+          Text(
+            "$title: ",
+
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      );
+    }
 
   Widget _buildButtons() {
     return ElevatedButton(

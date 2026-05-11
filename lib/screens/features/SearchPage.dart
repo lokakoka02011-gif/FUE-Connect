@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fue_connect/widgets/loading_indicator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:fue_connect/screens/features/OpportunitiesPage.dart';
+import 'package:fue_connect/screens/features/ClubsPage.dart';
+import 'package:fue_connect/screens/features/EventsPage.dart';
+import 'package:fue_connect/screens/features/VolunteerPage.dart';
+
+
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -11,163 +18,682 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  final TextEditingController _searchController = TextEditingController();
+
+  final TextEditingController _searchController =
+      TextEditingController();
+
+  final FocusNode _searchFocusNode =
+      FocusNode();
+
   String _searchQuery = "";
+  String _selectedCategory = "All";
+
   List<Map<String, dynamic>> _searchResults = [];
   List<Map<String, dynamic>> _recentlyViewed = [];
+  List<Map<String, dynamic>> _recommendedItems = [];
+
+  List<String> _recentSearches = [];
+
   bool _isLoading = false;
+  bool _isSearchFocused = false;
+
+  final List<String> _categories = [
+    "All",
+    "Clubs",
+    "Events",
+    "Opportunity",
+  ];
 
   @override
   void initState() {
     super.initState();
+
     _loadRecentlyViewed();
+    _loadRecentSearches();
+    _loadRecommendations();
+
+    _searchFocusNode.addListener(() {
+      setState(() {
+        _isSearchFocused =
+            _searchFocusNode.hasFocus;
+      });
+    });
   }
 
-// save & load recently viewed items 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  // save & load recently viewed items
   Future<void> _loadRecentlyViewed() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? recentData = prefs.getString('recent_searches');
+
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    final String? recentData =
+        prefs.getString('recent_viewed');
+
     if (recentData != null) {
+
       setState(() {
-        _recentlyViewed = List<Map<String, dynamic>>.from(json.decode(recentData));
+        _recentlyViewed =
+            List<Map<String, dynamic>>.from(
+          json.decode(recentData),
+        );
       });
     }
   }
-// add item lel recently viewed
-  Future<void> _addToRecent(Map<String, dynamic> item) async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // Remove duplicates to move the item to the top
-    _recentlyViewed.removeWhere((element) => 
-        element['displayTitle'] == item['displayTitle'] && 
-        element['origin'] == item['origin']);
-    
-    _recentlyViewed.insert(0, item);
-    
-    // keep list akher 5 items only for manageablity 
-    if (_recentlyViewed.length > 5) _recentlyViewed.removeLast();
 
-    await prefs.setString('recent_searches', json.encode(_recentlyViewed));
+  // load recent searches
+  Future<void> _loadRecentSearches() async {
+
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    final recentSearches =
+        prefs.getStringList(
+      'recent_search_queries',
+    );
+
+    if (recentSearches != null) {
+
+      setState(() {
+        _recentSearches =
+            recentSearches;
+      });
+    }
+  }
+
+  // load recommendations
+  Future<void> _loadRecommendations() async {
+
+    List<Map<String, dynamic>>
+        recommendations = [];
+
+    try {
+
+      var eventSnap =
+          await FirebaseFirestore.instance
+              .collection('Events')
+              .limit(2)
+              .get();
+
+      for (var doc in eventSnap.docs) {
+
+        var data = doc.data();
+
+        data['displayTitle'] =
+            data['name'];
+
+        data['origin'] = 'Events';
+        data['docId'] = doc.id;
+
+        recommendations.add(data);
+      }
+
+      var clubSnap =
+          await FirebaseFirestore.instance
+              .collection('Clubs')
+              .limit(2)
+              .get();
+
+      for (var doc in clubSnap.docs) {
+
+        var data = doc.data();
+
+        data['displayTitle'] =
+            data['name'];
+
+        data['origin'] = 'Clubs';
+        data['docId'] = doc.id;
+
+        recommendations.add(data);
+      }
+
+      var oppSnap =
+          await FirebaseFirestore.instance
+              .collection('Opportunity')
+              .limit(2)
+              .get();
+
+      for (var doc in oppSnap.docs) {
+
+        var data = doc.data();
+
+        data['displayTitle'] =
+            data['Title'];
+
+        data['origin'] =
+            'Opportunity';
+
+        data['docId'] =
+            doc.id;
+
+        recommendations.add(data);
+      }
+
+    } catch (e) {
+
+      debugPrint(
+        "Recommendation Error: $e",
+      );
+    }
+
+    setState(() {
+      _recommendedItems =
+          recommendations;
+    });
+  }
+
+  // save recent search query
+  Future<void> _saveRecentSearch(
+    String query,
+  ) async {
+
+    if (query.trim().isEmpty) return;
+
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    _recentSearches.remove(query);
+
+    _recentSearches.insert(0, query);
+
+    if (_recentSearches.length > 8) {
+      _recentSearches.removeLast();
+    }
+
+    await prefs.setStringList(
+      'recent_search_queries',
+      _recentSearches,
+    );
+
+    setState(() {});
+  }
+
+  // add item lel recently viewed
+  Future<void> _addToRecent(
+    Map<String, dynamic> item,
+  ) async {
+
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    // Remove duplicates to move the item to the top
+    _recentlyViewed.removeWhere(
+      (element) =>
+          element['displayTitle'] ==
+              item['displayTitle'] &&
+          element['origin'] ==
+              item['origin'],
+    );
+
+    _recentlyViewed.insert(0, item);
+
+    // keep list akher 5 items only for manageablity
+    if (_recentlyViewed.length > 5) {
+      _recentlyViewed.removeLast();
+    }
+
+    await prefs.setString(
+      'recent_viewed',
+      json.encode(_recentlyViewed),
+    );
+
     setState(() {});
   }
 
   // search fel clubs w events w opportunities
-  void _performSearch(String query) async {
+  void _performSearch(
+    String query,
+  ) async {
+
     if (query.trim().isEmpty) {
+
       setState(() {
         _searchResults = [];
         _searchQuery = "";
       });
+
       return;
     }
 
     setState(() {
       _isLoading = true;
-      _searchQuery = query.toLowerCase();
+      _searchQuery =
+          query.toLowerCase();
     });
 
-    List<Map<String, dynamic>> tempResults = [];
+    List<Map<String, dynamic>>
+        tempResults = [];
 
     try {
+
       // Search clubs
-      var clubSnap = await FirebaseFirestore.instance.collection('Clubs').get();
-      for (var doc in clubSnap.docs) {
-        var data = doc.data();
-        String name = (data['name'] ?? "").toString().toLowerCase();
-        if (name.contains(_searchQuery)) {
-          data['displayTitle'] = data['name'];
-          data['origin'] = 'Clubs';
-          tempResults.add(data);
+      if (_selectedCategory ==
+              "All" ||
+          _selectedCategory ==
+              "Clubs") {
+
+        var clubSnap =
+            await FirebaseFirestore.instance
+                .collection('Clubs')
+                .get();
+
+        for (var doc in clubSnap.docs) {
+
+          var data = doc.data();
+
+          String name =
+              (data['name'] ?? "")
+                  .toString()
+                  .toLowerCase();
+
+          if (name.contains(
+              _searchQuery)) {
+
+            data['displayTitle'] =
+                data['name'];
+
+            data['origin'] =
+                'Clubs';
+
+            data['docId'] =
+                doc.id;
+
+            tempResults.add(data);
+          }
         }
       }
 
       // Search events
-      var eventSnap = await FirebaseFirestore.instance.collection('Events').get();
-      for (var doc in eventSnap.docs) {
-        var data = doc.data();
-        String name = (data['name'] ?? "").toString().toLowerCase();
-        if (name.contains(_searchQuery)) {
-          data['displayTitle'] = data['name'];
-          data['origin'] = 'Events';
-          tempResults.add(data);
+      if (_selectedCategory ==
+              "All" ||
+          _selectedCategory ==
+              "Events") {
+
+        var eventSnap =
+            await FirebaseFirestore.instance
+                .collection('Events')
+                .get();
+
+        for (var doc in eventSnap.docs) {
+
+          var data = doc.data();
+
+          String name =
+              (data['name'] ?? "")
+                  .toString()
+                  .toLowerCase();
+
+          if (name.contains(
+              _searchQuery)) {
+
+            data['displayTitle'] =
+                data['name'];
+
+            data['origin'] =
+                'Events';
+
+            data['docId'] =
+                doc.id;
+
+            tempResults.add(data);
+          }
         }
       }
 
       // Search Opportunities
-      var oppSnap = await FirebaseFirestore.instance.collection('Opportunity').get();
-      for (var doc in oppSnap.docs) {
-        var data = doc.data();
-        String title = (data['Title'] ?? "").toString().toLowerCase();
-        if (title.contains(_searchQuery)) {
-          data['displayTitle'] = data['Title'];
-          data['origin'] = 'Opportunity';
-          tempResults.add(data);
+      if (_selectedCategory ==
+              "All" ||
+          _selectedCategory ==
+              "Opportunity") {
+
+        var oppSnap =
+            await FirebaseFirestore.instance
+                .collection('Opportunity')
+                .get();
+
+        for (var doc in oppSnap.docs) {
+
+          var data = doc.data();
+
+          String title =
+              (data['Title'] ?? "")
+                  .toString()
+                  .toLowerCase();
+
+          if (title.contains(
+              _searchQuery)) {
+
+            data['displayTitle'] =
+                data['Title'];
+
+            data['origin'] =
+                'Opportunity';
+
+            data['docId'] =
+                doc.id;
+
+            tempResults.add(data);
+          }
         }
       }
+
     } catch (e) {
-      debugPrint("Search Error: $e");
+
+      debugPrint(
+        "Search Error: $e",
+      );
     }
 
     setState(() {
-      _searchResults = tempResults;
+      _searchResults =
+          tempResults;
+
       _isLoading = false;
     });
   }
+    void _handleNavigation(Map<String, dynamic> item) {
+      _saveRecentSearch(_searchController.text);
+
+      Widget destination;
+      
+      switch (item['origin']) {
+        case 'Clubs':
+          destination = const ClubsPage(); 
+          break;
+        case 'Events':
+          destination = const EventsPage(); 
+          break;
+        case 'Volunteer':
+          destination = const VolunteerPage(); 
+          break;
+        case 'Opportunity':
+        default:
+          destination = const OpportunitiesPage();
+          break;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => destination),
+      );
+    }
 
   @override
   Widget build(BuildContext context) {
-    const Color fueRed = Color(0xffb1170c);
+
+    const Color fueRed =
+        Color(0xffb1170c);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+
+      backgroundColor:
+          Colors.white,
+
       appBar: AppBar(
-        title: const Text("Search FUE Connect"),
+        title: const Text(
+          "Search FUE Connect",
+        ),
         elevation: 0,
-        backgroundColor: fueRed,
-        foregroundColor: Colors.white,
+        backgroundColor:
+            fueRed,
+        foregroundColor:
+            Colors.white,
       ),
+
       body: Column(
         children: [
+
           // Header Search Bar
           Container(
-            padding: const EdgeInsets.all(16.0),
-            decoration: const BoxDecoration(
+
+            padding:
+                const EdgeInsets.all(
+              16,
+            ),
+
+            decoration:
+                const BoxDecoration(
               color: fueRed,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(25),
-                bottomRight: Radius.circular(25),
+              borderRadius:
+                  BorderRadius.only(
+                bottomLeft:
+                    Radius.circular(
+                        25),
+                bottomRight:
+                    Radius.circular(
+                        25),
               ),
             ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _performSearch,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: "Search clubs, events, or jobs...",
-                hintStyle: const TextStyle(color: Colors.white70),
-                prefixIcon: const Icon(Icons.search, color: Colors.white),
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.15),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
+
+            child: Column(
+              children: [
+
+                TextField(
+
+                  controller:
+                      _searchController,
+
+                  focusNode:
+                      _searchFocusNode,
+
+                  onChanged:
+                      _performSearch,
+
+                  onSubmitted:
+                      _saveRecentSearch,
+
+                  style:
+                      const TextStyle(
+                    color:
+                        Colors.white,
+                  ),
+
+                  decoration:
+                      InputDecoration(
+
+                    hintText:
+                        "Search clubs, events, or jobs...",
+
+                    hintStyle:
+                        const TextStyle(
+                      color:
+                          Colors.white70,
+                    ),
+
+                    prefixIcon:
+                        const Icon(
+                      Icons.search,
+                      color:
+                          Colors.white,
+                    ),
+
+                    filled: true,
+
+                    fillColor:
+                        Colors.white
+                            .withOpacity(
+                                0.15),
+
+                    border:
+                        OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(
+                              30),
+                      borderSide:
+                          BorderSide.none,
+                    ),
+
+                    contentPadding:
+                        const EdgeInsets.symmetric(
+                      vertical: 0,
+                    ),
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              ),
+
+                if (_isSearchFocused) ...[
+
+                  const SizedBox(
+                    height: 14,
+                  ),
+
+                  SizedBox(
+
+                    height: 38,
+
+                    child:
+                        ListView.separated(
+
+                      scrollDirection:
+                          Axis.horizontal,
+
+                      itemCount:
+                          _categories
+                              .length,
+
+                      separatorBuilder:
+                          (
+                        context,
+                        index,
+                      ) =>
+                              const SizedBox(
+                        width: 10,
+                      ),
+
+                      itemBuilder:
+                          (
+                        context,
+                        index,
+                      ) {
+
+                        final category =
+                            _categories[
+                                index];
+
+                        final isSelected =
+                            _selectedCategory ==
+                                category;
+
+                        return GestureDetector(
+
+                          onTap: () {
+
+                            setState(() {
+                              _selectedCategory =
+                                  category;
+                            });
+
+                            if (_searchQuery
+                                .isNotEmpty) {
+
+                              _performSearch(
+                                _searchController
+                                    .text,
+                              );
+                            }
+                          },
+
+                          child: Container(
+
+                            padding:
+                                const EdgeInsets.symmetric(
+                              horizontal:
+                                  16,
+                              vertical:
+                                  8,
+                            ),
+
+                            decoration:
+                                BoxDecoration(
+
+                              color:
+                                  isSelected
+                                      ? Colors
+                                          .white
+                                      : Colors
+                                          .white
+                                          .withOpacity(
+                                              0.15),
+
+                              borderRadius:
+                                  BorderRadius.circular(
+                                      20),
+                            ),
+
+                            child: Text(
+
+                              category,
+
+                              style:
+                                  TextStyle(
+
+                                color:
+                                    isSelected
+                                        ? fueRed
+                                        : Colors
+                                            .white,
+
+                                fontWeight:
+                                    FontWeight
+                                        .bold,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
 
           Expanded(
+
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: fueRed))
-                : _searchQuery.isEmpty
+
+                ? const Center(
+                    child:
+                        LoadingIndicator(
+                      color:
+                          fueRed,
+                    ),
+                  )
+
+                : _searchQuery
+                        .isEmpty
+
                     ? _buildEmptyState()
-                    : _searchResults.isEmpty
+
+                    : _searchResults
+                            .isEmpty
+
                         ? _buildNoResultsState()
+
                         : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _searchResults.length,
-                            itemBuilder: (context, index) => _buildResultTile(_searchResults[index]),
+
+                            padding:
+                                const EdgeInsets.all(
+                                    16),
+
+                            itemCount:
+                                _searchResults
+                                    .length,
+
+                            itemBuilder:
+                                (
+                              context,
+                              index,
+                            ) =>
+                                    _buildResultTile(
+                              _searchResults[
+                                  index],
+                            ),
                           ),
           ),
         ],
@@ -175,120 +701,328 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
+
   Widget _buildEmptyState() {
+    // If the user clicked the search bar show search history
+    if (_isSearchFocused) {
+      return ListView(
+        children: [
+          if (_recentSearches.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Text("Search History", style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            ..._recentSearches.map((search) => ListTile(
+              leading: const Icon(Icons.history),
+              title: Text(search),
+              onTap: () {
+                _searchController.text = search;
+                _performSearch(search);
+              },
+            )),
+          ] else ...[
+            // Optional: Show a "Start typing to search" hint here
+            const Center(child: Padding(
+              padding: EdgeInsets.only(top: 40),
+              child: Text("Type to find clubs, events, or jobs"),
+            )),
+          ]
+        ],
+      );
+    }
+
     return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Recently viewed items
-          if (_recentlyViewed.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 16, 10),
-              child: Text("Recently Viewed", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ),
-            ..._recentlyViewed.map((item) => _buildResultTile(item, isRecent: true)).toList(),
-            const Divider(height: 40, indent: 20, endIndent: 20),
-          ],
-
-          // Recommended For You
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 10, 16, 15),
-            child: Row(
-              children: [
-                Icon(Icons.auto_awesome, color: Colors.orange, size: 20),
-                SizedBox(width: 8),
-                Text("Recommended for You", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-          _buildRecommendationCard(
-            title: "Robotics Workshop 2024",
-            category: "Events",
-            color: Colors.orange,
-            icon: Icons.precision_manufacturing,
-          ),
-          _buildRecommendationCard(
-            title: "Business Analytics Club",
-            category: "Clubs",
-            color: Colors.blue,
-            icon: Icons.insights,
-          ),
-          _buildRecommendationCard(
-            title: "Junior Flutter Developer",
-            category: "Opportunity",
-            color: Colors.green,
-            icon: Icons.code,
-          ),
+          _buildRecommendedSection(), 
         ],
       ),
     );
   }
 
-  Widget _buildResultTile(Map<String, dynamic> item, {bool isRecent = false}) {
+  Widget _buildResultTile(
+    Map<String, dynamic> item, {
+    bool isRecent = false,
+  }) {
+
     Color originColor;
     IconData icon;
 
     switch (item['origin']) {
-      case 'Clubs': originColor = Colors.blue; icon = Icons.groups; break;
-      case 'Events': originColor = Colors.orange; icon = Icons.event; break;
-      default: originColor = Colors.green; icon = Icons.work;
+
+      case 'Clubs':
+        originColor =
+            Colors.blue;
+        icon =
+            Icons.groups;
+        break;
+
+      case 'Events':
+        originColor =
+            Colors.orange;
+        icon =
+            Icons.event;
+        break;
+
+      default:
+        originColor =
+            Colors.green;
+        icon =
+            Icons.work;
     }
 
     return ListTile(
-      leading: Icon(isRecent ? Icons.history : icon, color: isRecent ? Colors.grey : originColor),
-      title: Text(item['displayTitle'] ?? "Untitled", style: const TextStyle(fontWeight: FontWeight.w500)),
-      subtitle: Text(item['origin'], style: TextStyle(color: originColor, fontSize: 12)),
-      trailing: const Icon(Icons.chevron_right, size: 18),
+
+      leading: Icon(
+
+        isRecent
+            ? Icons.history
+            : icon,
+
+        color: isRecent
+            ? Colors.grey
+            : originColor,
+      ),
+
+      title: Text(
+
+        item['displayTitle'] ??
+            "Untitled",
+
+        style:
+            const TextStyle(
+          fontWeight:
+              FontWeight.w500,
+        ),
+      ),
+
+      subtitle: Text(
+
+        item['origin'],
+
+        style: TextStyle(
+          color:
+              originColor,
+          fontSize: 12,
+        ),
+      ),
+
+      trailing: const Icon(
+        Icons.chevron_right,
+        size: 18,
+      ),
+
       onTap: () {
+
         _addToRecent(item);
-        String route = '/${item['origin'].toLowerCase()}';
-        if (item['origin'] == 'Opportunity') route = '/opportunities';
-        Navigator.pushNamed(context, route);
+
+        _saveRecentSearch(
+          _searchController
+              .text,
+        );
+
+        if (item['origin'] ==
+            'Opportunity') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    const OpportunitiesPage(),
+              ),
+            );
+        }
       },
     );
   }
 
-  Widget _buildRecommendationCard({required String title, required String category, required Color color, required IconData icon}) {
+  Widget _buildRecommendationCard({
+    required String title,
+    required String category,
+    required Color color,
+    required IconData icon,
+  }) {
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+
+      margin:
+          const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 8,
       ),
+
+      padding:
+          const EdgeInsets.all(
+              16),
+
+      decoration:
+          BoxDecoration(
+
+        color: Colors.white,
+
+        borderRadius:
+            BorderRadius.circular(
+                15),
+
+        boxShadow: [
+
+          BoxShadow(
+            color: Colors.black
+                .withOpacity(
+                    0.05),
+
+            blurRadius: 10,
+
+            offset:
+                const Offset(
+                    0, 4),
+          ),
+        ],
+      ),
+
       child: Row(
         children: [
+
           Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: color),
+
+            padding:
+                const EdgeInsets.all(
+                    10),
+
+            decoration:
+                BoxDecoration(
+
+              color: color
+                  .withOpacity(
+                      0.1),
+
+              borderRadius:
+                  BorderRadius.circular(
+                      10),
+            ),
+
+            child: Icon(
+              icon,
+              color:
+                  color,
+            ),
           ),
-          const SizedBox(width: 15),
+
+          const SizedBox(
+              width: 15),
+
           Expanded(
+
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+
+              crossAxisAlignment:
+                  CrossAxisAlignment
+                      .start,
+
               children: [
-                Text(category.toUpperCase(), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
-                const SizedBox(height: 2),
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+
+                Text(
+
+                  category
+                      .toUpperCase(),
+
+                  style:
+                      TextStyle(
+
+                    color:
+                        color,
+
+                    fontSize:
+                        10,
+
+                    fontWeight:
+                        FontWeight
+                            .bold,
+
+                    letterSpacing:
+                        1.1,
+                  ),
+                ),
+
+                const SizedBox(
+                    height: 2),
+
+                Text(
+
+                  title,
+
+                  style:
+                      const TextStyle(
+                    fontWeight:
+                        FontWeight
+                            .bold,
+                    fontSize:
+                        15,
+                  ),
+                ),
               ],
             ),
           ),
-          const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
+
+          const Icon(
+            Icons
+                .arrow_forward_ios,
+            size: 12,
+            color:
+                Colors.grey,
+          ),
         ],
       ),
     );
   }
+  Widget _buildRecommendedSection() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_recentlyViewed.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
+              child: Text("Recently Viewed", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            ..._recentlyViewed.map((item) => _buildResultTile(item, isRecent: true)),
+          ],
+          // ... rest of the code I provided previously ...
+        ],
+      );
+    }
 
   Widget _buildNoResultsState() {
+
     return Center(
+
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+
+        mainAxisAlignment:
+            MainAxisAlignment
+                .center,
+
         children: [
-          Icon(Icons.search_off_rounded, size: 60, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          Text("No matches for '$_searchQuery'", style: const TextStyle(color: Colors.grey)),
+
+          Icon(
+            Icons
+                .search_off_rounded,
+            size: 60,
+            color:
+                Colors.grey[300],
+          ),
+
+          const SizedBox(
+              height: 16),
+
+          Text(
+
+            "No matches for '$_searchQuery'",
+
+            style:
+                const TextStyle(
+              color:
+                  Colors.grey,
+            ),
+          ),
         ],
       ),
     );

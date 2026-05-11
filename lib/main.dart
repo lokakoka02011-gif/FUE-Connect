@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:fue_connect/screens/features/admin/AdminDashboardPage.dart';
+import 'package:fue_connect/screens/features/management/AdminDashboardPage.dart';
 import 'firebase_options.dart';
+import 'package:fue_connect/screens/features/StudentLiveChat.dart';
 
 // Services
 import 'package:fue_connect/services/auth_service.dart';
@@ -73,6 +74,7 @@ class MyApp extends StatelessWidget {
         '/saved': (context) => const SavedItemsPage(),
         '/admin_dashboard': (context) => const AdminDashboardPage(),
         '/settings': (context) => const SettingsPage(),
+        '/chat': (context) => const StudentLiveChat(),
         '/forms': (context){
           final data = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>; 
           return FormsPage(data: data);
