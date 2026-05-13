@@ -12,10 +12,16 @@ class PostsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     const Color fueRed = Color(0xffb1170c);
 
+    final user = FirebaseAuth.instance.currentUser;
+
+    // USER NOT LOGGED IN
+    if (user == null) {
+      return const Scaffold(body: Center(child: Text("User not logged in")));
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(clubName != null ? "$clubName Posts" : "Posts"),
-
         backgroundColor: fueRed,
         foregroundColor: Colors.white,
       ),
@@ -23,44 +29,52 @@ class PostsPage extends StatelessWidget {
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance
             .collection('users')
-            .doc(FirebaseAuth.instance.currentUser!.uid)
+            .doc(user.uid)
             .get(),
 
         builder: (context, userSnapshot) {
+          // LOADING
           if (userSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: LoadingIndicator());
           }
 
-          final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
+          // USER DATA
+          final userData =
+              userSnapshot.data?.data() as Map<String, dynamic>? ?? {};
 
-          final joinedClubs = List<String>.from(userData?['joinedClubs'] ?? []);
+          // JOINED CLUBS
+          final joinedClubs =
+              (userData['joinedClubs'] as List?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [];
 
           return StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('posts')
-                .orderBy('featured', descending: true)
-                .orderBy('createdAt', descending: true)
-                .snapshots(),
+            stream: FirebaseFirestore.instance.collection('posts').snapshots(),
 
             builder: (context, snapshot) {
+              // ERROR
               if (snapshot.hasError) {
-                return const Center(child: Text("Error loading posts"));
+                return Center(child: Text("Error: ${snapshot.error}"));
               }
 
+              // LOADING
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: LoadingIndicator());
               }
 
-              final allPosts = snapshot.data!.docs;
+              // POSTS
+              final allPosts = snapshot.data?.docs ?? [];
 
+              // FILTER POSTS
               final visiblePosts = allPosts.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
 
-                final visibility = data['visibility'] ?? 'public';
+                final visibility = (data['visibility'] ?? 'public').toString();
 
-                final postClubName = data['clubName'];
+                final postClubName = (data['clubName'] ?? '').toString();
 
-                // FILTER CLUB POSTS
+                // FILTER CLUB PAGE
                 if (clubName != null && postClubName != clubName) {
                   return false;
                 }
@@ -70,7 +84,7 @@ class PostsPage extends StatelessWidget {
                   return true;
                 }
 
-                // CLUB EXCLUSIVE POSTS
+                // CLUB EXCLUSIVE
                 if (visibility == 'clubExclusive') {
                   return joinedClubs.contains(postClubName);
                 }
@@ -78,18 +92,19 @@ class PostsPage extends StatelessWidget {
                 return false;
               }).toList();
 
+              // NO POSTS
               if (visiblePosts.isEmpty) {
                 return Center(
                   child: Text(
                     clubName != null
                         ? "No posts available for $clubName"
                         : "No posts available",
-
                     style: const TextStyle(fontSize: 16),
                   ),
                 );
               }
 
+              // POSTS LIST
               return ListView.builder(
                 itemCount: visiblePosts.length,
 
@@ -97,15 +112,23 @@ class PostsPage extends StatelessWidget {
                   final data =
                       visiblePosts[index].data() as Map<String, dynamic>;
 
-                  final visibility = data['visibility'] ?? 'public';
+                  final visibility = (data['visibility'] ?? 'public')
+                      .toString();
 
-                  final bool isExclusive = visibility == 'clubExclusive';
+                  final isExclusive = visibility == 'clubExclusive';
 
-                  final bool isFeatured = data['featured'] ?? false;
+                  final title = (data['title'] ?? 'No Title').toString();
+
+                  final content = (data['content'] ?? '').toString();
+
+                  final type = (data['type'] ?? '').toString();
+
+                  final club = (data['clubName'] ?? '').toString();
+
+                  final imageUrl = (data['imgUrl'] ?? '').toString();
 
                   return Card(
                     margin: const EdgeInsets.all(12),
-
                     elevation: 3,
 
                     child: Padding(
@@ -120,41 +143,13 @@ class PostsPage extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Text(
-                                  data['title'] ?? 'No Title',
-
+                                  title,
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
-
-                              // FEATURED
-                              if (isFeatured)
-                                Container(
-                                  margin: const EdgeInsets.only(right: 6),
-
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber,
-
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-
-                                  child: const Text(
-                                    "Featured",
-
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
 
                               // MEMBERS ONLY
                               if (isExclusive)
@@ -182,10 +177,10 @@ class PostsPage extends StatelessWidget {
                             ],
                           ),
 
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
 
                           // TYPE
-                          if (data['type'] != null)
+                          if (type.isNotEmpty)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
@@ -199,7 +194,7 @@ class PostsPage extends StatelessWidget {
                               ),
 
                               child: Text(
-                                data['type'].toString().toUpperCase(),
+                                type.toUpperCase(),
 
                                 style: TextStyle(
                                   color: fueRed,
@@ -212,9 +207,9 @@ class PostsPage extends StatelessWidget {
                           const SizedBox(height: 8),
 
                           // CLUB NAME
-                          if (data['clubName'] != null)
+                          if (club.isNotEmpty)
                             Text(
-                              data['clubName'],
+                              club,
 
                               style: TextStyle(
                                 color: fueRed,
@@ -225,28 +220,25 @@ class PostsPage extends StatelessWidget {
                           const SizedBox(height: 8),
 
                           // IMAGE
-                          if ((data['imgUrl'] ?? '').toString().isNotEmpty)
+                          if (imageUrl.isNotEmpty)
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
 
                               child: Image.network(
-                                data['imgUrl'],
+                                imageUrl,
 
                                 fit: BoxFit.cover,
 
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(
                                     height: 180,
-
                                     width: double.infinity,
 
                                     color: Colors.grey[300],
 
                                     child: const Icon(
                                       Icons.image_not_supported,
-
                                       size: 40,
-
                                       color: Colors.grey,
                                     ),
                                   );
@@ -257,11 +249,7 @@ class PostsPage extends StatelessWidget {
                           const SizedBox(height: 10),
 
                           // CONTENT
-                          Text(
-                            data['content'] ?? '',
-
-                            style: const TextStyle(fontSize: 15),
-                          ),
+                          Text(content, style: const TextStyle(fontSize: 15)),
                         ],
                       ),
                     ),

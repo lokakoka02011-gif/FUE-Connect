@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ==============================
-// ADMIN LIVE CHAT
-// ==============================
-
 class AdminLiveChat extends StatelessWidget {
   const AdminLiveChat({super.key});
 
@@ -15,9 +11,7 @@ class AdminLiveChat extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Live Chat', style: TextStyle(color: Colors.white)),
-
         backgroundColor: fueRed,
-
         foregroundColor: Colors.white,
       ),
 
@@ -55,15 +49,12 @@ class AdminLiveChat extends StatelessWidget {
 
                       decoration: BoxDecoration(
                         color: Colors.grey[200],
-
                         shape: BoxShape.circle,
                       ),
 
                       child: const Icon(
                         Icons.chat_bubble_outline,
-
                         size: 60,
-
                         color: Colors.grey,
                       ),
                     ),
@@ -72,10 +63,8 @@ class AdminLiveChat extends StatelessWidget {
 
                     const Text(
                       "No Live Chats Yet",
-
                       style: TextStyle(
                         fontSize: 22,
-
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -84,9 +73,7 @@ class AdminLiveChat extends StatelessWidget {
 
                     Text(
                       "When students contact support,\nconversations will appear here.",
-
                       textAlign: TextAlign.center,
-
                       style: TextStyle(color: Colors.grey[600], fontSize: 15),
                     ),
                   ],
@@ -106,7 +93,8 @@ class AdminLiveChat extends StatelessWidget {
             itemBuilder: (context, index) {
               final data = chatDocs[index].data() as Map<String, dynamic>;
 
-              final studentRef = (data['userRef'] ?? 'Unknown Student')
+              // GET REAL STUDENT EMAIL
+              final studentEmail = (data['studentEmail'] ?? 'Unknown Student')
                   .toString();
 
               final lastMessage = data['lastMessage'] ?? 'No messages yet';
@@ -119,15 +107,12 @@ class AdminLiveChat extends StatelessWidget {
 
                 leading: CircleAvatar(
                   radius: 25,
-
                   backgroundColor: fueRed,
-
                   child: const Icon(Icons.person, color: Colors.white),
                 ),
 
                 title: Text(
-                  studentRef,
-
+                  studentEmail,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
 
@@ -136,9 +121,7 @@ class AdminLiveChat extends StatelessWidget {
 
                   child: Text(
                     lastMessage,
-
                     maxLines: 1,
-
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -153,8 +136,7 @@ class AdminLiveChat extends StatelessWidget {
                       builder: (context) {
                         return AdminChatDetail(
                           chatId: chatDocs[index].id,
-
-                          studentEmail: studentRef,
+                          studentEmail: studentEmail,
                         );
                       },
                     ),
@@ -169,19 +151,13 @@ class AdminLiveChat extends StatelessWidget {
   }
 }
 
-// ==============================
-// CHAT DETAIL
-// ==============================
-
 class AdminChatDetail extends StatefulWidget {
   final String chatId;
   final String studentEmail;
 
   const AdminChatDetail({
     super.key,
-
     required this.chatId,
-
     required this.studentEmail,
   });
 
@@ -209,13 +185,9 @@ class _AdminChatDetailState extends State<AdminChatDetail> {
         .collection('messages')
         .add({
           'senderRole': 'admin',
-
           'senderRef': 'admin_account_id',
-
           'message': msg,
-
           'createdAt': FieldValue.serverTimestamp(),
-
           'isRead': false,
         });
 
@@ -225,7 +197,6 @@ class _AdminChatDetailState extends State<AdminChatDetail> {
         .doc(widget.chatId)
         .update({
           'lastMessage': msg,
-
           'lastMessageTime': FieldValue.serverTimestamp(),
         });
   }
@@ -238,12 +209,10 @@ class _AdminChatDetailState extends State<AdminChatDetail> {
       appBar: AppBar(
         title: Text(
           widget.studentEmail,
-
           style: const TextStyle(color: Colors.white, fontSize: 16),
         ),
 
         backgroundColor: fueRed,
-
         foregroundColor: Colors.white,
       ),
 
@@ -274,9 +243,7 @@ class _AdminChatDetailState extends State<AdminChatDetail> {
                       children: [
                         Icon(
                           Icons.forum_outlined,
-
                           size: 60,
-
                           color: Colors.grey[400],
                         ),
 
@@ -284,10 +251,8 @@ class _AdminChatDetailState extends State<AdminChatDetail> {
 
                         Text(
                           "No messages yet",
-
                           style: TextStyle(
                             color: Colors.grey[600],
-
                             fontSize: 16,
                           ),
                         ),
@@ -299,7 +264,6 @@ class _AdminChatDetailState extends State<AdminChatDetail> {
                 // MESSAGES LIST
                 return ListView.builder(
                   reverse: true,
-
                   padding: const EdgeInsets.all(12),
 
                   itemCount: snapshot.data!.docs.length,
@@ -365,7 +329,6 @@ class _AdminChatDetailState extends State<AdminChatDetail> {
 
                     decoration: const InputDecoration(
                       hintText: "Reply to student...",
-
                       border: InputBorder.none,
                     ),
                   ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fue_connect/screens/features/management/AddItemsPage.dart';
 import 'package:fue_connect/widgets/loading_indicator.dart';
 import 'package:fue_connect/widgets/filter_pills.dart';
@@ -193,7 +193,12 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
                 // FILTER DOCS
                 final docs = snapshot.data!.docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-
+                  if (!widget.isAdmin &&
+                      isOpportunities &&
+                      data['createdBy'] !=
+                          FirebaseAuth.instance.currentUser?.uid) {
+                    return false;
+                  }
                   // USERS
                   if (isUsers && data['role'] != 'student') {
                     return false;

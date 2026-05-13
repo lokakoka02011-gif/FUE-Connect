@@ -11,15 +11,11 @@ class CompanyDashboard extends StatefulWidget {
   const CompanyDashboard({super.key});
 
   @override
-  State<CompanyDashboard> createState() =>
-      _CompanyDashboardState();
+  State<CompanyDashboard> createState() => _CompanyDashboardState();
 }
 
-class _CompanyDashboardState
-    extends State<CompanyDashboard> {
-
-  final Color fueRed =
-      const Color(0xffb1170c);
+class _CompanyDashboardState extends State<CompanyDashboard> {
+  final Color fueRed = const Color(0xffb1170c);
 
   bool _isLoading = true;
 
@@ -48,166 +44,105 @@ class _CompanyDashboardState
   }
 
   Future<void> loadCompanyData() async {
-
     try {
-
-      final currentUser =
-          FirebaseAuth.instance.currentUser;
+      final currentUser = FirebaseAuth.instance.currentUser;
 
       if (currentUser == null) return;
 
-      final userDoc =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(currentUser.uid)
-              .get();
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
 
-      final userData =
-          userDoc.data()
-              as Map<String, dynamic>;
+      final userData = userDoc.data() as Map<String, dynamic>;
 
-      companyName =
-          userData['companyName'] ??
-              "Company";
+      companyName = userData['companyName'] ?? "Company";
 
-      approvalStatus =
-          userData['approvalStatus'] ??
-              "pending";
+      approvalStatus = userData['approvalStatus'] ?? "pending";
 
-      companyProfileCompleted =
-          userData['companyProfileCompleted'] ??
-              false;
+      companyProfileCompleted = userData['companyProfileCompleted'] ?? false;
 
-      subscriptionPlan = userData['subscriptionPlan'] ??
-              "free";
-    
-      subscriptionEnd =
-          userData['subscriptionEnd'];
-      subscriptionActive =
-          userData['subscriptionActive']
-              ?? true;
+      subscriptionPlan = userData['subscriptionPlan'] ?? "free";
+
+      subscriptionEnd = userData['subscriptionEnd'];
+      subscriptionActive = userData['subscriptionActive'] ?? true;
 
       if (subscriptionPlan == "silver") {
-
         postsLimit = 5;
 
         unlockLimit = 50;
 
         featuredAllowed = false;
-
       } else if (subscriptionPlan == "gold") {
         postsLimit = -1;
         unlockLimit = -1;
         featuredAllowed = true;
-
       } else {
-
         postsLimit = 1;
         unlockLimit = 10;
         featuredAllowed = false;
       }
 
-    if (subscriptionEnd != null) {
-      final expiryDate =
-          subscriptionEnd!.toDate();
-      if (DateTime.now()
-          .isAfter(expiryDate)) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUser.uid)
-            .update({
-          "subscriptionPlan":
-              "free",
-          "subscriptionActive":
-              false,
-          "subscriptionEnd":
-              null,
-        });
+      if (subscriptionEnd != null) {
+        final expiryDate = subscriptionEnd!.toDate();
+        if (DateTime.now().isAfter(expiryDate)) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .update({
+                "subscriptionPlan": "free",
+                "subscriptionActive": false,
+                "subscriptionEnd": null,
+              });
 
-        subscriptionPlan = "free";
-        subscriptionActive = false;
-        postsLimit = 1;
-        unlockLimit = 10;
-        featuredAllowed = false;
+          subscriptionPlan = "free";
+          subscriptionActive = false;
+          postsLimit = 1;
+          unlockLimit = 10;
+          featuredAllowed = false;
+        }
       }
-    }
 
-      final postsSnapshot =
-          await FirebaseFirestore.instance
-              .collection('opportunities')
-              .where(
-                'createdBy',
-                isEqualTo:
-                    currentUser.uid,
-              )
-              .get();
+      final postsSnapshot = await FirebaseFirestore.instance
+          .collection('opportunities')
+          .where('createdBy', isEqualTo: currentUser.uid)
+          .get();
 
-        totalPosts = postsSnapshot.docs.where((doc) {
-              final status =
-                  doc['status'];
-              return status != "rejected";
-            }).length;
+      totalPosts = postsSnapshot.docs.where((doc) {
+        final status = doc['status'];
+        return status != "rejected";
+      }).length;
 
-      final approvedSnapshot =
-          await FirebaseFirestore.instance
-              .collection('opportunities')
-              .where(
-                'createdBy',
-                isEqualTo:
-                    currentUser.uid,
-              )
-              .where(
-                'status',
-                isEqualTo:
-                    'approved',
-              )
-              .get();
+      final approvedSnapshot = await FirebaseFirestore.instance
+          .collection('opportunities')
+          .where('createdBy', isEqualTo: currentUser.uid)
+          .where('status', isEqualTo: 'approved')
+          .get();
 
-      approvedPosts =
-          approvedSnapshot.docs.length;
+      approvedPosts = approvedSnapshot.docs.length;
 
-      final rejectedSnapshot =
-          await FirebaseFirestore.instance
-              .collection('opportunities')
-              .where(
-                'createdBy',
-                isEqualTo:
-                    currentUser.uid,
-              )
-              .where(
-                'status',
-                isEqualTo:
-                    'rejected',
-              )
-              .get();
+      final rejectedSnapshot = await FirebaseFirestore.instance
+          .collection('opportunities')
+          .where('createdBy', isEqualTo: currentUser.uid)
+          .where('status', isEqualTo: 'rejected')
+          .get();
 
-      rejectedPosts =
-          rejectedSnapshot.docs.length;
+      rejectedPosts = rejectedSnapshot.docs.length;
 
-      final applicationsSnapshot =
-          await FirebaseFirestore.instance
-              .collection('applications')
-              .where(
-                'companyId',
-                isEqualTo:
-                    currentUser.uid,
-              )
-              .get();
+      final applicationsSnapshot = await FirebaseFirestore.instance
+          .collection('applications')
+          .where('companyId', isEqualTo: currentUser.uid)
+          .get();
 
-      applicationsCount =
-          applicationsSnapshot.docs.length;
+      applicationsCount = applicationsSnapshot.docs.length;
 
       if (mounted) {
-
         setState(() {
           _isLoading = false;
         });
       }
-
     } catch (e) {
-
       if (mounted) {
-
         setState(() {
           _isLoading = false;
         });
@@ -216,18 +151,13 @@ class _CompanyDashboardState
   }
 
   Future<void> logout() async {
-
     await FirebaseAuth.instance.signOut();
 
     if (mounted) {
-
       Navigator.pushAndRemoveUntil(
         context,
 
-        MaterialPageRoute(
-          builder: (_) =>
-              const LoginScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
 
         (route) => false,
       );
@@ -236,108 +166,56 @@ class _CompanyDashboardState
 
   @override
   Widget build(BuildContext context) {
-
-    if (!companyProfileCompleted &&
-        !_isLoading) {
-
-      return CompleteCompanyProfilePage(
-        onComplete: loadCompanyData,
-      );
+    if (!companyProfileCompleted && !_isLoading) {
+      return CompleteCompanyProfilePage(onComplete: loadCompanyData);
     }
 
-    if (approvalStatus != "approved" &&
-        !_isLoading) {
-
+    if (approvalStatus != "approved" && !_isLoading) {
       return Scaffold(
-
-        backgroundColor:
-            Colors.grey[100],
+        backgroundColor: Colors.grey[100],
 
         appBar: AppBar(
+          automaticallyImplyLeading: false,
 
-          automaticallyImplyLeading:
-              false,
+          title: const Text("Pending Approval"),
 
-          title:
-              const Text(
-            "Pending Approval",
-          ),
+          backgroundColor: fueRed,
 
-          backgroundColor:
-              fueRed,
-
-          foregroundColor:
-              Colors.white,
+          foregroundColor: Colors.white,
 
           actions: [
-
-            IconButton(
-              onPressed: logout,
-              icon:
-                  const Icon(Icons.logout),
-            ),
+            IconButton(onPressed: logout, icon: const Icon(Icons.logout)),
           ],
         ),
 
         body: Center(
-
           child: Padding(
-
-            padding:
-                const EdgeInsets.all(
-              24,
-            ),
+            padding: const EdgeInsets.all(24),
 
             child: Column(
-
-              mainAxisAlignment:
-                  MainAxisAlignment
-                      .center,
+              mainAxisAlignment: MainAxisAlignment.center,
 
               children: [
+                Icon(Icons.hourglass_top_rounded, size: 90, color: fueRed),
 
-                Icon(
-                  Icons
-                      .hourglass_top_rounded,
-
-                  size: 90,
-
-                  color: fueRed,
-                ),
-
-                const SizedBox(
-                    height: 24),
+                const SizedBox(height: 24),
 
                 const Text(
-
                   "Your company account is waiting for admin approval.",
 
-                  textAlign:
-                      TextAlign.center,
+                  textAlign: TextAlign.center,
 
-                  style: TextStyle(
-
-                    fontSize: 22,
-
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
 
-                const SizedBox(
-                    height: 14),
+                const SizedBox(height: 14),
 
                 const Text(
-
                   "You will gain access once an administrator reviews your company.",
 
-                  textAlign:
-                      TextAlign.center,
+                  textAlign: TextAlign.center,
 
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 15,
-                  ),
+                  style: TextStyle(color: Colors.grey, fontSize: 15),
                 ),
               ],
             ),
@@ -347,121 +225,67 @@ class _CompanyDashboardState
     }
 
     return Scaffold(
-
-      backgroundColor:
-          Colors.grey[100],
+      backgroundColor: Colors.grey[100],
 
       appBar: AppBar(
+        automaticallyImplyLeading: false,
 
-        automaticallyImplyLeading:
-            false,
+        title: const Text("Company Dashboard"),
 
-        title:
-            const Text(
-          "Company Dashboard",
-        ),
+        backgroundColor: fueRed,
 
-        backgroundColor:
-            fueRed,
-
-        foregroundColor:
-            Colors.white,
+        foregroundColor: Colors.white,
 
         elevation: 0,
 
         actions: [
-
-          IconButton(
-            onPressed: logout,
-            icon:
-                const Icon(Icons.logout),
-          ),
+          IconButton(onPressed: logout, icon: const Icon(Icons.logout)),
         ],
       ),
 
       body: _isLoading
-
-          ? const Center(
-              child:
-                  CircularProgressIndicator(),
-            )
-
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-
-              padding:
-                  const EdgeInsets.all(
-                16,
-              ),
+              padding: const EdgeInsets.all(16),
 
               child: Column(
-
-                crossAxisAlignment:
-                    CrossAxisAlignment
-                        .start,
+                crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
-
                   // welcome card
                   Container(
+                    width: double.infinity,
 
-                    width:
-                        double.infinity,
+                    padding: const EdgeInsets.all(22),
 
-                    padding:
-                        const EdgeInsets.all(
-                      22,
-                    ),
-
-                    decoration:
-                        BoxDecoration(
-
+                    decoration: BoxDecoration(
                       color: fueRed,
 
-                      borderRadius:
-                          BorderRadius.circular(
-                        24,
-                      ),
+                      borderRadius: BorderRadius.circular(24),
                     ),
 
                     child: Column(
-
-                      crossAxisAlignment:
-                          CrossAxisAlignment
-                              .start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
 
                       children: [
-
                         Text(
-
                           "Welcome $companyName 👋",
 
-                          style:
-                              const TextStyle(
-
-                            color:
-                                Colors.white,
+                          style: const TextStyle(
+                            color: Colors.white,
 
                             fontSize: 26,
 
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
 
-                        const SizedBox(
-                            height: 8),
+                        const SizedBox(height: 8),
 
                         const Text(
-
                           "Manage opportunities, applicants, and subscriptions.",
 
-                          style: TextStyle(
-
-                            color:
-                                Colors.white70,
-
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 14),
                         ),
                       ],
                     ),
@@ -471,71 +295,45 @@ class _CompanyDashboardState
 
                   // my subscription
                   GestureDetector(
-
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              const SubscriptionPlansPage(),
+                          builder: (_) => const SubscriptionPlansPage(),
                         ),
                       );
                     },
                     child: Container(
                       width: double.infinity,
-                      padding:
-                          const EdgeInsets.all(
-                        18,
-                      ),
+                      padding: const EdgeInsets.all(18),
 
-                      decoration:
-                          BoxDecoration(
+                      decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius:
-                            BorderRadius.circular(
-                          20,
-                        ),
+                        borderRadius: BorderRadius.circular(20),
 
-                        border: Border.all(
-                          color: fueRed,
-                          width: 2,
-                        ),
+                        border: Border.all(color: fueRed, width: 2),
                       ),
 
                       child: Row(
-
                         children: [
-
-                          Icon(
-                            Icons.workspace_premium,
-                            color: fueRed,
-                          ),
+                          Icon(Icons.workspace_premium, color: fueRed),
 
                           const SizedBox(width: 12),
 
                           Expanded(
-
                             child: Column(
-
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
 
                               children: [
-
                                 const Text(
-
                                   "MY SUBSCRIPTION",
 
-                                  style: TextStyle(
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
+                                  style: TextStyle(fontWeight: FontWeight.bold),
                                 ),
 
                                 const SizedBox(height: 4),
                                 Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       "${subscriptionPlan.toUpperCase()} "
@@ -546,10 +344,7 @@ class _CompanyDashboardState
                                     ),
                                     if (subscriptionEnd != null)
                                       Padding(
-                                        padding:
-                                            const EdgeInsets.only(
-                                          top: 4,
-                                        ),
+                                        padding: const EdgeInsets.only(top: 4),
                                         child: Text(
                                           "Expires: "
                                           "${subscriptionEnd!.toDate().day}/"
@@ -567,10 +362,7 @@ class _CompanyDashboardState
                             ),
                           ),
 
-                          const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 18,
-                          ),
+                          const Icon(Icons.arrow_forward_ios, size: 18),
                         ],
                       ),
                     ),
@@ -580,13 +372,11 @@ class _CompanyDashboardState
 
                   // analytics
                   GridView.count(
-
                     crossAxisCount: 4,
 
                     shrinkWrap: true,
 
-                    physics:
-                        const NeverScrollableScrollPhysics(),
+                    physics: const NeverScrollableScrollPhysics(),
 
                     crossAxisSpacing: 8,
 
@@ -595,35 +385,29 @@ class _CompanyDashboardState
                     childAspectRatio: 0.9,
 
                     children: [
-
                       _miniStatCard(
-                        value:
-                            totalPosts.toString(),
+                        value: totalPosts.toString(),
                         label: "Posts",
                         icon: Icons.work,
                         color: fueRed,
                       ),
 
                       _miniStatCard(
-                        value:
-                            approvedPosts.toString(),
+                        value: approvedPosts.toString(),
                         label: "Approved",
                         icon: Icons.check,
                         color: Colors.green,
                       ),
 
                       _miniStatCard(
-                        value:
-                            rejectedPosts.toString(),
+                        value: rejectedPosts.toString(),
                         label: "Rejected",
                         icon: Icons.close,
                         color: Colors.red,
                       ),
 
                       _miniStatCard(
-                        value:
-                            applicationsCount
-                                .toString(),
+                        value: applicationsCount.toString(),
                         label: "Applicants",
                         icon: Icons.people,
                         color: Colors.blue,
@@ -634,32 +418,20 @@ class _CompanyDashboardState
                   const SizedBox(height: 28),
 
                   const Text(
-
                     "Quick Actions",
 
-                    style: TextStyle(
-
-                      fontSize: 20,
-
-                      fontWeight:
-                          FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
 
                   const SizedBox(height: 16),
 
                   _buildDashboardCard(
-
                     context: context,
 
-                    icon:
-                        Icons.work_outline,
+                    icon: Icons.work_outline,
+                    title: "Manage Opportunities",
 
-                    title:
-                        "Manage Opportunities",
-
-                    subtitle:
-                        "Edit and manage your posts",
+                    subtitle: "Edit and manage your posts",
 
                     color: fueRed,
 
@@ -667,12 +439,10 @@ class _CompanyDashboardState
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              const ManageItemsPage(
-                            title:
-                                'Manage Opportunities',
-                            collectionPath:
-                                'opportunities',
+                          builder: (_) => ManageItemsPage(
+                            title: 'Manage Opportunities',
+                            collectionPath: 'opportunities',
+                            isAdmin: false,
                           ),
                         ),
                       );
@@ -681,77 +451,59 @@ class _CompanyDashboardState
 
                   const SizedBox(height: 14),
 
-                _buildDashboardCard(
-                  context: context,
-                  icon:
-                      Icons.add_circle_outline,
-                  title:
-                      "Add Opportunity",
-                  subtitle:
-                      "Create a new job or internship",
-                  color: Colors.green,
-                  onTap: () {
-                    if (postsLimit != -1 &&
-                        totalPosts >= postsLimit) {
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(
-                        SnackBar(
-                          backgroundColor: Colors.red,
-                          content: Text(
-                            subscriptionPlan == "free"
-                                ? "Free plan allows only 1 active post."
-                                : "You reached your plan limit.",
+                  _buildDashboardCard(
+                    context: context,
+                    icon: Icons.add_circle_outline,
+                    title: "Add Opportunity",
+                    subtitle: "Create a new job or internship",
+                    color: Colors.green,
+                    onTap: () {
+                      if (postsLimit != -1 && totalPosts >= postsLimit) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: Colors.red,
+                            content: Text(
+                              subscriptionPlan == "free"
+                                  ? "Free plan allows only 1 active post."
+                                  : "You reached your plan limit.",
+                            ),
+                          ),
+                        );
+
+                        return;
+                      }
+
+                      Navigator.push(
+                        context,
+
+                        MaterialPageRoute(
+                          builder: (_) => const AddEditItemPage(
+                            collectionPath: 'opportunities',
                           ),
                         ),
                       );
-
-                      return;
-                    }
-
-                    Navigator.push(
-
-                      context,
-
-                      MaterialPageRoute(
-
-                        builder: (_) =>
-                            const AddEditItemPage(
-
-                          collectionPath:
-                              'opportunities',
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                    },
+                  ),
 
                   const SizedBox(height: 14),
 
                   _buildDashboardCard(
-
                     context: context,
 
-                    icon:
-                        Icons.groups_outlined,
+                    icon: Icons.groups_outlined,
 
-                    title:
-                        "Applicants",
+                    title: "Applicants",
 
-                    subtitle:
-                        "View student applications",
+                    subtitle: "View student applications",
 
                     color: Colors.orange,
 
                     onTap: () {
-
                       Navigator.push(
-
                         context,
 
                         MaterialPageRoute(
-
-                          builder: (_) =>
-                              const ApplicantsPage(),
+                          builder: (_) => const ApplicantsPage(),
                         ),
                       );
                     },
@@ -763,7 +515,6 @@ class _CompanyDashboardState
   }
 
   Widget _miniStatCard({
-
     required String value,
 
     required String label,
@@ -772,83 +523,42 @@ class _CompanyDashboardState
 
     required Color color,
   }) {
-
     return Container(
-
-      padding:
-          const EdgeInsets.symmetric(
-        vertical: 10,
-        horizontal: 6,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
 
       decoration: BoxDecoration(
-
         color: Colors.white,
 
-        borderRadius:
-            BorderRadius.circular(
-          16,
-        ),
+        borderRadius: BorderRadius.circular(16),
 
         boxShadow: [
-
-          BoxShadow(
-            color:
-                Colors.black.withOpacity(
-              0.03,
-            ),
-
-            blurRadius: 8,
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8),
         ],
       ),
 
       child: Column(
-
-        mainAxisAlignment:
-            MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
 
         children: [
-
-          Icon(
-            icon,
-            color: color,
-            size: 18,
-          ),
+          Icon(icon, color: color, size: 18),
 
           const SizedBox(height: 6),
 
           Text(
-
             value,
 
-            style: const TextStyle(
-
-              fontWeight:
-                  FontWeight.bold,
-
-              fontSize: 18,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
 
           const SizedBox(height: 2),
 
-          Text(
-
-            label,
-
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.grey,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
         ],
       ),
     );
   }
 
   Widget _buildDashboardCard({
-
     required BuildContext context,
 
     required IconData icon,
@@ -861,67 +571,31 @@ class _CompanyDashboardState
 
     required VoidCallback onTap,
   }) {
-
     return Card(
-
       elevation: 1,
 
-      shape:
-          RoundedRectangleBorder(
-
-        borderRadius:
-            BorderRadius.circular(
-          18,
-        ),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
 
       child: ListTile(
-
-        contentPadding:
-            const EdgeInsets.all(
-          16,
-        ),
+        contentPadding: const EdgeInsets.all(16),
 
         leading: Container(
+          padding: const EdgeInsets.all(12),
 
-          padding:
-              const EdgeInsets.all(
-            12,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.12),
+
+            borderRadius: BorderRadius.circular(14),
           ),
 
-          decoration:
-              BoxDecoration(
-
-            color:
-                color.withOpacity(
-              0.12,
-            ),
-
-            borderRadius:
-                BorderRadius.circular(
-              14,
-            ),
-          ),
-
-          child:
-              Icon(icon, color: color),
+          child: Icon(icon, color: color),
         ),
 
-        title: Text(
-
-          title,
-
-          style: const TextStyle(
-            fontWeight:
-                FontWeight.bold,
-          ),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
 
         subtitle: Text(subtitle),
 
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-        ),
+        trailing: const Icon(Icons.arrow_forward_ios),
 
         onTap: onTap,
       ),
@@ -929,52 +603,37 @@ class _CompanyDashboardState
   }
 }
 
-class CompleteCompanyProfilePage
-    extends StatefulWidget {
-
+class CompleteCompanyProfilePage extends StatefulWidget {
   final VoidCallback onComplete;
 
-  const CompleteCompanyProfilePage({
-    super.key,
-    required this.onComplete,
-  });
+  const CompleteCompanyProfilePage({super.key, required this.onComplete});
 
   @override
-  State<CompleteCompanyProfilePage>
-      createState() =>
-          _CompleteCompanyProfilePageState();
+  State<CompleteCompanyProfilePage> createState() =>
+      _CompleteCompanyProfilePageState();
 }
 
 class _CompleteCompanyProfilePageState
     extends State<CompleteCompanyProfilePage> {
+  final companyNameController = TextEditingController();
 
-  final companyNameController =
-      TextEditingController();
+  final descriptionController = TextEditingController();
 
-  final descriptionController =
-      TextEditingController();
+  final websiteController = TextEditingController();
 
-  final websiteController =
-      TextEditingController();
-
-  final locationController =
-      TextEditingController();
+  final locationController = TextEditingController();
 
   bool isLoading = false;
 
-  final Color fueRed =
-      const Color(0xffb1170c);
+  final Color fueRed = const Color(0xffb1170c);
 
   Future<void> saveCompanyData() async {
-
     setState(() {
       isLoading = true;
     });
 
     try {
-
-      final currentUser =
-          FirebaseAuth.instance.currentUser;
+      final currentUser = FirebaseAuth.instance.currentUser;
 
       if (currentUser == null) return;
 
@@ -982,41 +641,25 @@ class _CompleteCompanyProfilePageState
           .collection('users')
           .doc(currentUser.uid)
           .update({
+            "companyName": companyNameController.text,
 
-        "companyName":
-            companyNameController.text,
+            "companyDescription": descriptionController.text,
 
-        "companyDescription":
-            descriptionController.text,
+            "companyWebsite": websiteController.text,
 
-        "companyWebsite":
-            websiteController.text,
+            "companyLocation": locationController.text,
 
-        "companyLocation":
-            locationController.text,
+            "companyProfileCompleted": true,
 
-        "companyProfileCompleted":
-            true,
-
-        "approvalStatus":
-            "pending",
-      });
+            "approvalStatus": "pending",
+          });
 
       widget.onComplete();
-
     } catch (e) {
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-
-        SnackBar(
-          content:
-              Text("Error: $e"),
-        ),
-      );
-
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
-
       setState(() {
         isLoading = false;
       });
@@ -1025,128 +668,80 @@ class _CompleteCompanyProfilePageState
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
-      backgroundColor:
-          Colors.grey[100],
+      backgroundColor: Colors.grey[100],
 
       appBar: AppBar(
+        automaticallyImplyLeading: false,
 
-        automaticallyImplyLeading:
-            false,
+        title: const Text("Complete Company Profile"),
 
-        title: const Text(
-          "Complete Company Profile",
-        ),
+        backgroundColor: fueRed,
 
-        backgroundColor:
-            fueRed,
-
-        foregroundColor:
-            Colors.white,
+        foregroundColor: Colors.white,
       ),
 
       body: SingleChildScrollView(
-
-        padding:
-            const EdgeInsets.all(
-          20,
-        ),
+        padding: const EdgeInsets.all(20),
 
         child: Column(
-
           children: [
-
             _buildField(
-              controller:
-                  companyNameController,
-              label:
-                  "Company Name",
+              controller: companyNameController,
+              label: "Company Name",
             ),
 
             const SizedBox(height: 16),
 
             _buildField(
-              controller:
-                  descriptionController,
-              label:
-                  "Company Description",
+              controller: descriptionController,
+              label: "Company Description",
               maxLines: 4,
             ),
 
             const SizedBox(height: 16),
 
             _buildField(
-              controller:
-                  websiteController,
-              label:
-                  "Company Website",
+              controller: websiteController,
+              label: "Company Website",
             ),
 
             const SizedBox(height: 16),
 
             _buildField(
-              controller:
-                  locationController,
-              label:
-                  "Company Location",
+              controller: locationController,
+              label: "Company Location",
             ),
 
             const SizedBox(height: 30),
 
             SizedBox(
-
-              width:
-                  double.infinity,
+              width: double.infinity,
 
               height: 55,
 
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: fueRed,
 
-                style:
-                    ElevatedButton.styleFrom(
-
-                  backgroundColor:
-                      fueRed,
-
-                  shape:
-                      RoundedRectangleBorder(
-
-                    borderRadius:
-                        BorderRadius.circular(
-                      16,
-                    ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
 
-                onPressed:
-                    isLoading
-                        ? null
-                        : saveCompanyData,
+                onPressed: isLoading ? null : saveCompanyData,
 
-                child:
+                child: isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "SAVE COMPANY INFO",
 
-                    isLoading
+                        style: TextStyle(
+                          color: Colors.white,
 
-                        ? const CircularProgressIndicator(
-                            color:
-                                Colors.white,
-                          )
-
-                        : const Text(
-
-                            "SAVE COMPANY INFO",
-
-                            style: TextStyle(
-
-                              color:
-                                  Colors.white,
-
-                              fontWeight:
-                                  FontWeight.bold,
-                            ),
-                          ),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -1156,36 +751,26 @@ class _CompleteCompanyProfilePageState
   }
 
   Widget _buildField({
-
-    required TextEditingController
-        controller,
+    required TextEditingController controller,
 
     required String label,
 
     int maxLines = 1,
   }) {
-
     return TextField(
-
       controller: controller,
 
       maxLines: maxLines,
 
       decoration: InputDecoration(
-
         labelText: label,
 
         filled: true,
 
         fillColor: Colors.white,
 
-        border:
-            OutlineInputBorder(
-
-          borderRadius:
-              BorderRadius.circular(
-            16,
-          ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
 
           borderSide: BorderSide.none,
         ),
@@ -1194,24 +779,15 @@ class _CompleteCompanyProfilePageState
   }
 }
 
-class SubscriptionPlansPage
-    extends StatefulWidget {
-
-  const SubscriptionPlansPage({
-    super.key,
-  });
+class SubscriptionPlansPage extends StatefulWidget {
+  const SubscriptionPlansPage({super.key});
 
   @override
-  State<SubscriptionPlansPage>
-      createState() =>
-          _SubscriptionPlansPageState();
+  State<SubscriptionPlansPage> createState() => _SubscriptionPlansPageState();
 }
 
-class _SubscriptionPlansPageState
-    extends State<SubscriptionPlansPage> {
-
-  final Color fueRed =
-      const Color(0xffb1170c);
+class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
+  final Color fueRed = const Color(0xffb1170c);
 
   bool silver6Months = false;
 
@@ -1219,132 +795,73 @@ class _SubscriptionPlansPageState
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
-      backgroundColor:
-          Colors.grey[100],
+      backgroundColor: Colors.grey[100],
 
       appBar: AppBar(
-
-        automaticallyImplyLeading:
-            false,
-
-        title:
-            const Text(
-          "My Subscription",
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
 
-        backgroundColor:
-            fueRed,
+        title: const Text("My Subscription"),
 
-        foregroundColor:
-            Colors.white,
+        backgroundColor: fueRed,
 
-        actions: [
-
-          IconButton(
-
-            onPressed: () {
-              Navigator.pop(context);
-            },
-
-            icon:
-                const Icon(Icons.close),
-          ),
-        ],
+        foregroundColor: Colors.white,
       ),
 
       body: SingleChildScrollView(
-
-        padding:
-            const EdgeInsets.all(
-          16,
-        ),
+        padding: const EdgeInsets.all(16),
 
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
-
             // current plan
             Container(
               width: double.infinity,
-              padding:
-                  const EdgeInsets.all(
-                20,
-              ),
+              padding: const EdgeInsets.all(20),
 
-              decoration:
-                  BoxDecoration(
-
+              decoration: BoxDecoration(
                 color: Colors.white,
 
-                borderRadius:
-                    BorderRadius.circular(
-                  22,
-                ),
+                borderRadius: BorderRadius.circular(22),
 
-                border: Border.all(
-                  color: fueRed,
-                  width: 2,
-                ),
+                border: Border.all(color: fueRed, width: 2),
               ),
 
               child: Column(
-
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
-
                   const Text(
-
                     "CURRENT PLAN",
 
-                    style: TextStyle(
-
-                      fontWeight:
-                          FontWeight.bold,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
 
                   const SizedBox(height: 16),
 
                   const Text(
-
                     "FREE",
 
-                    style: TextStyle(
-
-                      fontSize: 30,
-
-                      fontWeight:
-                          FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
                   ),
 
                   const SizedBox(height: 20),
 
-                  _usageRow(
-                    "Posts Remaining",
-                    "1",
-                  ),
+                  _usageRow("Posts Remaining", "1"),
 
                   const SizedBox(height: 12),
 
-                  _usageRow(
-                    "Applicant Unlocks",
-                    "10",
-                  ),
+                  _usageRow("Applicant Unlocks", "10"),
 
                   const SizedBox(height: 12),
 
-                  _usageRow(
-                    "Featured Posts",
-                    "Unavailable",
-                  ),
+                  _usageRow("Featured Posts", "Unavailable"),
                 ],
               ),
             ),
@@ -1352,37 +869,25 @@ class _SubscriptionPlansPageState
             const SizedBox(height: 28),
 
             const Text(
-
               "Upgrade Plans",
 
-              style: TextStyle(
-
-                fontSize: 22,
-
-                fontWeight:
-                    FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 18),
 
             _planCard(
-
               title: "SILVER",
 
-              monthlyPrice:
-                  "299 EGP",
+              monthlyPrice: "299 EGP",
 
-              sixMonthPrice:
-                  "1499 EGP",
+              sixMonthPrice: "1499 EGP",
 
-              sixMonths:
-                  silver6Months,
+              sixMonths: silver6Months,
 
               color: Colors.grey,
 
               features: [
-
                 "5 active posts",
 
                 "50 applicant unlocks",
@@ -1393,10 +898,8 @@ class _SubscriptionPlansPageState
               ],
 
               onChanged: (value) {
-
                 setState(() {
-                  silver6Months =
-                      value;
+                  silver6Months = value;
                 });
               },
             ),
@@ -1404,21 +907,17 @@ class _SubscriptionPlansPageState
             const SizedBox(height: 20),
 
             _planCard(
-
               title: "GOLD",
 
-              monthlyPrice:
-                  "599 EGP",
+              monthlyPrice: "599 EGP",
 
-              sixMonthPrice:
-                  "2999 EGP",
+              sixMonthPrice: "2999 EGP",
 
               sixMonths: gold6Months,
 
               color: const Color(0xffD4AF37),
 
               features: [
-
                 "Unlimited posts",
 
                 "Unlimited unlocks",
@@ -1431,10 +930,8 @@ class _SubscriptionPlansPageState
               ],
 
               onChanged: (value) {
-
                 setState(() {
-                  gold6Months =
-                      value;
+                  gold6Months = value;
                 });
               },
             ),
@@ -1444,39 +941,19 @@ class _SubscriptionPlansPageState
     );
   }
 
-  Widget _usageRow(
-    String title,
-    String value,
-  ) {
-
+  Widget _usageRow(String title, String value) {
     return Row(
-
-      mainAxisAlignment:
-          MainAxisAlignment
-              .spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
       children: [
+        Text(title, style: const TextStyle(color: Colors.grey)),
 
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.grey,
-          ),
-        ),
-
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight:
-                FontWeight.bold,
-          ),
-        ),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
       ],
     );
   }
 
   Widget _planCard({
-
     required String title,
 
     required String monthlyPrice,
@@ -1489,68 +966,42 @@ class _SubscriptionPlansPageState
 
     required List<String> features,
 
-    required Function(bool)
-        onChanged,
+    required Function(bool) onChanged,
   }) {
-
     return Container(
-
       width: double.infinity,
 
-      padding:
-          const EdgeInsets.all(
-        20,
-      ),
+      padding: const EdgeInsets.all(20),
 
-      decoration:
-          BoxDecoration(
-
+      decoration: BoxDecoration(
         color: Colors.white,
 
-        borderRadius:
-            BorderRadius.circular(
-          22,
-        ),
+        borderRadius: BorderRadius.circular(22),
 
-        border: Border.all(
-          color:
-              color.withOpacity(0.5),
-          width: 2,
-        ),
+        border: Border.all(color: color.withOpacity(0.5), width: 2),
       ),
 
       child: Column(
-
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
 
         children: [
-
           Row(
-
-            mainAxisAlignment:
-                MainAxisAlignment
-                    .spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
             children: [
-
               Text(
-
                 title,
 
                 style: TextStyle(
-
                   fontSize: 28,
 
-                  fontWeight:
-                      FontWeight.bold,
+                  fontWeight: FontWeight.bold,
 
                   color: color,
                 ),
               ),
 
               Switch(
-
                 value: sixMonths,
 
                 activeColor: color,
@@ -1561,59 +1012,32 @@ class _SubscriptionPlansPageState
           ),
 
           Text(
+            sixMonths ? "6 Months" : "Monthly",
 
-            sixMonths
-                ? "6 Months"
-                : "Monthly",
-
-            style: const TextStyle(
-              color: Colors.grey,
-            ),
+            style: const TextStyle(color: Colors.grey),
           ),
 
           const SizedBox(height: 20),
 
           Text(
+            sixMonths ? sixMonthPrice : monthlyPrice,
 
-            sixMonths
-                ? sixMonthPrice
-                : monthlyPrice,
-
-            style: const TextStyle(
-
-              fontSize: 30,
-
-              fontWeight:
-                  FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 20),
 
           ...features.map(
-
             (feature) => Padding(
-
-              padding:
-                  const EdgeInsets.only(
-                bottom: 12,
-              ),
+              padding: const EdgeInsets.only(bottom: 12),
 
               child: Row(
-
                 children: [
-
-                  Icon(
-                    Icons.check_circle,
-                    color: color,
-                    size: 22,
-                  ),
+                  Icon(Icons.check_circle, color: color, size: 22),
 
                   const SizedBox(width: 10),
 
-                  Expanded(
-                    child: Text(feature),
-                  ),
+                  Expanded(child: Text(feature)),
                 ],
               ),
             ),
@@ -1622,57 +1046,32 @@ class _SubscriptionPlansPageState
           const SizedBox(height: 20),
 
           SizedBox(
-
             width: double.infinity,
 
             child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
 
-              style:
-                  ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
 
-                backgroundColor:
-                    color,
-
-                padding:
-                    const EdgeInsets.symmetric(
-                  vertical: 16,
-                ),
-
-                shape:
-                    RoundedRectangleBorder(
-
-                  borderRadius:
-                      BorderRadius.circular(
-                    16,
-                  ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
 
               onPressed: () {
-
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(
-
-                  const SnackBar(
-
-                    content: Text(
-                      "Call us on 1234 to subscribe",
-                    ),
-                  ),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Call us on 1234 to subscribe")),
                 );
               },
 
               child: const Text(
-
                 "CALL US ON 1234",
 
                 style: TextStyle(
-
                   color: Colors.white,
 
-                  fontWeight:
-                      FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -1681,4 +1080,4 @@ class _SubscriptionPlansPageState
       ),
     );
   }
-}                  
+}

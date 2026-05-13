@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:html' as html;
-import 'package:flutter/foundation.dart';
 import 'package:fue_connect/widgets/loading_indicator.dart';
 
 class FormsPage extends StatefulWidget {
   final Map<String, dynamic> data;
 
-  const FormsPage({super.key, required this.data});
+  const FormsPage({
+    super.key,
+    required this.data,
+  });
 
   @override
   State<FormsPage> createState() => _FormsPageState();
@@ -18,12 +19,13 @@ class _FormsPageState extends State<FormsPage> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _cvController = TextEditingController();
-  final TextEditingController _motivationController = TextEditingController();
+  final TextEditingController _motivationController =
+      TextEditingController();
 
   bool _isSubmitting = false;
+
   bool get isClubForm => widget.data['type'] == 'club';
 
-  // skill selector 
   List<String> selectedSkills = [];
   List<String> allSkills = [];
 
@@ -33,11 +35,15 @@ class _FormsPageState extends State<FormsPage> {
     _loadSkills();
   }
 
-// load available skills men Firestore to add to list
   Future<void> _loadSkills() async {
-    final snapshot = await FirebaseFirestore.instance.collection('skills').get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('skills')
+        .get();
+
     setState(() {
-      allSkills = snapshot.docs.map((doc) => doc['name'].toString()).toList();
+      allSkills = snapshot.docs
+          .map((doc) => doc['name'].toString())
+          .toList();
     });
   }
 
@@ -77,12 +83,14 @@ class _FormsPageState extends State<FormsPage> {
                 TextButton(
                   onPressed: () {
                     setState(() {
-                      selectedSkills = tempSelected.toSet().toList();
+                      selectedSkills =
+                          tempSelected.toSet().toList();
                     });
+
                     Navigator.pop(context);
                   },
                   child: const Text("Done"),
-                )
+                ),
               ],
             );
           },
@@ -91,7 +99,6 @@ class _FormsPageState extends State<FormsPage> {
     );
   }
 
-// submit application to Firestore with selected skills w user data
   Future<void> _submitApplication() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -111,7 +118,9 @@ class _FormsPageState extends State<FormsPage> {
       final studentId = userDoc.data()?['studentId'] ?? '';
       final email = user.email ?? '';
 
-      await FirebaseFirestore.instance.collection('applications').add({
+      await FirebaseFirestore.instance
+          .collection('applications')
+          .add({
         'userId': user.uid,
         'companyId': widget.data['createdBy'] ?? '',
         'userName': userName,
@@ -119,19 +128,23 @@ class _FormsPageState extends State<FormsPage> {
         'email': email,
         'opportunityId': widget.data['id'] ?? '',
         'title': widget.data['Title'] ?? '',
-        'organization': widget.data['Company'] ?? 'Unknown',
+        'organization':
+            widget.data['Company'] ?? 'Unknown',
         'cvUrl': _cvController.text,
         'motivation': _motivationController.text,
         'skills': selectedSkills.toSet().toList(),
         'status': 'pending',
-        'submissionDate': FieldValue.serverTimestamp(),
+        'submissionDate':
+            FieldValue.serverTimestamp(),
       });
 
       if (mounted) {
         Navigator.pop(context);
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Application submitted successfully"),
+            content:
+                Text("Application submitted successfully"),
             backgroundColor: Colors.green,
           ),
         );
@@ -146,27 +159,21 @@ class _FormsPageState extends State<FormsPage> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
   Future<void> _pickFile() async {
-  if (kIsWeb) {
-    final uploadInput = html.FileUploadInputElement();
-    uploadInput.accept = '.pdf,.doc,.docx';
-    uploadInput.click();
-
-    uploadInput.onChange.listen((event) {
-      final file = uploadInput.files?.first;
-
-      if (file != null) {    
-      setState(() {
-          _cvController.text = "CV Uploaded";
-        });
-      }
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          "File upload temporarily disabled",
+        ),
+      ),
+    );
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -190,49 +197,66 @@ class _FormsPageState extends State<FormsPage> {
                     color: Color(0xffb1170c),
                   ),
                 ),
+
                 const SizedBox(height: 20),
-              if (!isClubForm)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _pickFile,
-                    icon: const Icon(Icons.upload_file),
-                    label: Text(
-                      _cvController.text.isEmpty
-                          ? "Upload CV"
-                          : _cvController.text,
+
+                if (!isClubForm)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _pickFile,
+                      icon: const Icon(Icons.upload_file),
+                      label: Text(
+                        _cvController.text.isEmpty
+                            ? "Upload CV"
+                            : _cvController.text,
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 15),
+
+                _buildTextField(
+                  _motivationController,
+                  "Why are you applying?",
+                  Icons.edit,
+                  maxLines: 4,
+                ),
+
+                const SizedBox(height: 15),
+
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Skills",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              
-                const SizedBox(height: 15),
 
-                _buildTextField(_motivationController, "Why are you applying?", Icons.edit, maxLines: 4),
-
-                const SizedBox(height: 15),
-
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: const Text("Skills", style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
                 const SizedBox(height: 8),
 
-              // show selected skills
                 GestureDetector(
                   onTap: _openSkillSelector,
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.grey,
+                      ),
+                      borderRadius:
+                          BorderRadius.circular(10),
                     ),
                     child: Text(
                       selectedSkills.isEmpty
                           ? "Select skills"
                           : selectedSkills.join(", "),
                       style: TextStyle(
-                        color: selectedSkills.isEmpty ? Colors.grey : Colors.black,
+                        color: selectedSkills.isEmpty
+                            ? Colors.grey
+                            : Colors.black,
                       ),
                     ),
                   ),
@@ -245,17 +269,23 @@ class _FormsPageState extends State<FormsPage> {
                   height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xffb1170c),
+                      backgroundColor:
+                          const Color(0xffb1170c),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius:
+                            BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: _isSubmitting ? null : _submitApplication,
+                    onPressed: _isSubmitting
+                        ? null
+                        : _submitApplication,
                     child: _isSubmitting
                         ? const LoadingIndicator()
                         : const Text(
                             "Submit Application",
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(
+                              color: Colors.white,
+                            ),
                           ),
                   ),
                 ),
@@ -278,17 +308,24 @@ class _FormsPageState extends State<FormsPage> {
       padding: const EdgeInsets.only(bottom: 15),
       child: TextFormField(
         controller: controller,
-        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        keyboardType: isNumber
+            ? TextInputType.number
+            : TextInputType.text,
         maxLines: maxLines,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius:
+                BorderRadius.circular(10),
           ),
         ),
-        validator: (value) =>
-            (value == null || value.isEmpty) ? "Field required" : null,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return "Field required";
+          }
+          return null;
+        },
       ),
     );
   }

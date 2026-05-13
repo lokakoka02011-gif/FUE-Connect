@@ -1,23 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class StudentLiveChat extends StatefulWidget {
   const StudentLiveChat({super.key});
 
   @override
-  State<StudentLiveChat> createState() =>
-      _StudentLiveChatState();
+  State<StudentLiveChat> createState() => _StudentLiveChatState();
 }
 
-class _StudentLiveChatState
-    extends State<StudentLiveChat> {
+class _StudentLiveChatState extends State<StudentLiveChat> {
+  final TextEditingController _messageController = TextEditingController();
 
-  final TextEditingController
-      _messageController =
-          TextEditingController();
-
-  final String studentEmail =
-      "student@fue.edu.eg";
+  final user = FirebaseAuth.instance.currentUser;
 
   late final String chatId;
 
@@ -25,49 +20,42 @@ class _StudentLiveChatState
   void initState() {
     super.initState();
 
-    chatId =
-        studentEmail.replaceAll(
-      '@',
-      '_',
-    );
+    chatId = user!.uid;
 
     _createChatIfNeeded();
   }
 
-  Future<void>
-      _createChatIfNeeded() async {
+  Future<void> _createChatIfNeeded() async {
 
     final chatRef =
         FirebaseFirestore.instance
-            .collection(
-              'support_chats',
-            )
+            .collection('support_chats')
             .doc(chatId);
 
-    final doc =
-        await chatRef.get();
+    final doc = await chatRef.get();
 
     if (!doc.exists) {
 
       await chatRef.set({
-        'userRef': studentEmail,
+
+        'studentId': user!.uid,
+
+        'studentEmail': user!.email,
+
         'lastMessage': '',
+
         'lastMessageTime':
             FieldValue.serverTimestamp(),
+
         'isReadByAdmin': true,
       });
     }
   }
-
   Future<void> _sendMessage() async {
+    if (user == null) return;
+    if (_messageController.text.trim().isEmpty) return;
 
-    if (_messageController.text
-        .trim()
-        .isEmpty) return;
-
-    final msg =
-        _messageController.text
-            .trim();
+    final msg = _messageController.text.trim();
 
     _messageController.clear();
 
@@ -76,150 +64,82 @@ class _StudentLiveChatState
         .doc(chatId)
         .collection('messages')
         .add({
-
-      'senderRole': 'student',
-      'senderRef': studentEmail,
-      'message': msg,
-      'createdAt':
-          FieldValue.serverTimestamp(),
-      'isRead': false,
-    });
+          'senderRole': 'student',
+          'senderRef': user!.uid,
+          'message': msg,
+          'createdAt': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
 
     await FirebaseFirestore.instance
         .collection('support_chats')
         .doc(chatId)
         .update({
+          'lastMessage': msg,
+          'lastMessageTime': FieldValue.serverTimestamp(),
 
-      'lastMessage': msg,
-      'lastMessageTime':
-          FieldValue.serverTimestamp(),
-
-      'isReadByAdmin': false,
-    });
+          'isReadByAdmin': false,
+        });
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
-      appBar: AppBar(
-        title:
-            const Text("Live Support"),
-      ),
+      appBar: AppBar(title: const Text("Live Support")),
 
       body: Column(
-
         children: [
-
           Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('support_chats')
+                  .doc(chatId)
+                  .collection('messages')
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
 
-            child:
-                StreamBuilder<
-                    QuerySnapshot>(
-
-              stream:
-                  FirebaseFirestore
-                      .instance
-                      .collection(
-                          'support_chats')
-                      .doc(chatId)
-                      .collection(
-                          'messages')
-                      .orderBy(
-                        'createdAt',
-                        descending: true,
-                      )
-                      .snapshots(),
-
-              builder:
-                  (context, snapshot) {
-
+              builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-
-                  return const Center(
-                    child:
-                        CircularProgressIndicator(),
-                  );
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 return ListView.builder(
-
                   reverse: true,
 
-                  itemCount: snapshot
-                      .data!
-                      .docs
-                      .length,
+                  itemCount: snapshot.data!.docs.length,
 
-                  itemBuilder:
-                      (context, index) {
+                  itemBuilder: (context, index) {
+                    final data = snapshot.data!.docs[index];
 
-                    final data =
-                        snapshot
-                            .data!
-                            .docs[index];
-
-                    final isStudent =
-                        data[
-                                'senderRole'] ==
-                            'student';
+                    final isStudent = data['senderRole'] == 'student';
 
                     return Align(
-
-                      alignment:
-                          isStudent
-                              ? Alignment
-                                  .centerRight
-                              : Alignment
-                                  .centerLeft,
+                      alignment: isStudent
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
 
                       child: Container(
-
-                        margin:
-                            const EdgeInsets.symmetric(
-                          horizontal:
-                              12,
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 12,
                           vertical: 4,
                         ),
 
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal:
-                              14,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
                           vertical: 10,
                         ),
 
-                        decoration:
-                            BoxDecoration(
+                        decoration: BoxDecoration(
+                          color: isStudent ? Colors.red : Colors.grey[300],
 
-                          color:
-                              isStudent
-                                  ? Colors
-                                      .red
-                                  : Colors
-                                      .grey[300],
-
-                          borderRadius:
-                              BorderRadius.circular(
-                            14,
-                          ),
+                          borderRadius: BorderRadius.circular(14),
                         ),
 
                         child: Text(
+                          data['message'].toString(),
 
-                          data['message']
-                              .toString(),
-
-                          style:
-                              TextStyle(
-
-                            color:
-                                isStudent
-                                    ? Colors
-                                        .white
-                                    : Colors
-                                        .black,
+                          style: TextStyle(
+                            color: isStudent ? Colors.white : Colors.black,
                           ),
                         ),
                       ),
@@ -231,38 +151,24 @@ class _StudentLiveChatState
           ),
 
           Container(
-
-            padding:
-                const EdgeInsets.all(
-                    8),
+            padding: const EdgeInsets.all(8),
 
             child: Row(
-
               children: [
-
                 Expanded(
-
                   child: TextField(
+                    controller: _messageController,
 
-                    controller:
-                        _messageController,
-
-                    decoration:
-                        const InputDecoration(
-                      hintText:
-                          "Type message...",
+                    decoration: const InputDecoration(
+                      hintText: "Type message...",
                     ),
                   ),
                 ),
 
                 IconButton(
+                  onPressed: _sendMessage,
 
-                  onPressed:
-                      _sendMessage,
-
-                  icon: const Icon(
-                    Icons.send,
-                  ),
+                  icon: const Icon(Icons.send),
                 ),
               ],
             ),

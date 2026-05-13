@@ -63,12 +63,10 @@ class _VolunteerPageState extends State<VolunteerPage> {
           ),         
           const SizedBox(height: 10),
 
-          // opportunities list
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
-                  .collection('Opportunity')
-                  .where('Type', isEqualTo: 'Volunteer')
+                  .collection('volunteering')
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) return const Center(child: Text("Something went wrong"));

@@ -43,97 +43,97 @@ class _AdminDashboardPageState
     );
   }
 
-  // LOAD COUNTS
-  Future<void> _loadCounts() async {
+  void _listenToCounts() {
 
-    // STUDENTS ONLY
-    final students =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .where(
-              'role',
-              isEqualTo: 'student',
-            )
-            .get();
+    FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'student')
+        .snapshots()
+        .listen((snapshot) {
 
-    final clubs =
-        await FirebaseFirestore.instance
-            .collection('Clubs')
-            .get();
+      setState(() {
+        studentsCount = snapshot.docs.length;
+      });
+    });
 
-    final events =
-        await FirebaseFirestore.instance
-            .collection('Events')
-            .get();
+    FirebaseFirestore.instance
+        .collection('Clubs')
+        .snapshots()
+        .listen((snapshot) {
 
-    final opportunities =
-        await FirebaseFirestore.instance
-            .collection('opportunities')
-            .get();
+      setState(() {
+        clubsCount = snapshot.docs.length;
+      });
+    });
 
-    final volunteering =
-        await FirebaseFirestore.instance
-            .collection('volunteering')
-            .get();
+    FirebaseFirestore.instance
+        .collection('Events')
+        .snapshots()
+        .listen((snapshot) {
 
-    // FIXED POSTS COLLECTION
-    final posts =
-        await FirebaseFirestore.instance
-            .collection('posts')
-            .get();
+      setState(() {
+        eventsCount = snapshot.docs.length;
+      });
+    });
 
-    // ALL COMPANIES
-    final companies =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .where(
-              'role',
-              isEqualTo: 'company',
-            )
-            .get();
+    FirebaseFirestore.instance
+        .collection('opportunities')
+        .snapshots()
+        .listen((snapshot) {
 
-    // FIXED CHAT COLLECTION
-    final unreadChats =
-        await FirebaseFirestore.instance
-            .collection('messages')
-            .where(
-              'isReadByAdmin',
-              isEqualTo: false,
-            )
-            .get();
+      setState(() {
+        opportunitiesCount = snapshot.docs.length;
+      });
+    });
 
-    setState(() {
+    FirebaseFirestore.instance
+        .collection('volunteer')
+        .snapshots()
+        .listen((snapshot) {
 
-      studentsCount =
-          students.docs.length;
+      setState(() {
+        volunteeringCount = snapshot.docs.length;
+      });
+    });
 
-      clubsCount =
-          clubs.docs.length;
+    FirebaseFirestore.instance
+        .collection('posts')
+        .snapshots()
+        .listen((snapshot) {
 
-      eventsCount =
-          events.docs.length;
+      setState(() {
+        postsCount = snapshot.docs.length;
+      });
+    });
 
-      opportunitiesCount =
-          opportunities.docs.length;
+    FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'company')
+        .snapshots()
+        .listen((snapshot) {
 
-      volunteeringCount =
-          volunteering.docs.length;
+      setState(() {
+        companiesCount = snapshot.docs.length;
+      });
+    });
 
-      postsCount =
-          posts.docs.length;
+    FirebaseFirestore.instance
+        .collection('messages')
+        .where('isReadByAdmin', isEqualTo: false)
+        .snapshots()
+        .listen((snapshot) {
 
-      companiesCount =
-          companies.docs.length;
-
-      unreadChatsCount =
-          unreadChats.docs.length;
+      setState(() {
+        unreadChatsCount = snapshot.docs.length;
+      });
     });
   }
+
 
   @override
   void initState() {
     super.initState();
-    _loadCounts();
+    _listenToCounts();
   }
 
   @override
