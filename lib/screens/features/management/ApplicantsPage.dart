@@ -256,14 +256,31 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
                                       CircleAvatar(
                                         radius: 28,
 
-                                        backgroundColor: fueRed.withOpacity(
-                                          0.1,
-                                        ),
+                                        backgroundColor:
+                                            fueRed.withOpacity(0.1),
 
-                                        child: Icon(
-                                          Icons.person,
-                                          color: fueRed,
-                                        ),
+                                        backgroundImage:
+                                            data['profileImage'] !=
+                                                        null &&
+                                                    data['profileImage']
+                                                        .toString()
+                                                        .isNotEmpty
+                                                ? NetworkImage(
+                                                    data['profileImage'],
+                                                  )
+                                                : null,
+
+                                        child:
+                                            data['profileImage'] ==
+                                                        null ||
+                                                    data['profileImage']
+                                                        .toString()
+                                                        .isEmpty
+                                                ? Icon(
+                                                    Icons.person,
+                                                    color: fueRed,
+                                                  )
+                                                : null,
                                       ),
 
                                       const SizedBox(width: 14),
@@ -275,10 +292,12 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
 
                                           children: [
                                             Text(
-                                              data['studentName'] ?? 'Student',
+                                              data['studentName'] ??
+                                                  'Student',
 
                                               style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
+                                                fontWeight:
+                                                    FontWeight.bold,
 
                                                 fontSize: 18,
                                               ),
@@ -287,7 +306,8 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
                                             const SizedBox(height: 4),
 
                                             Text(
-                                              data['faculty'] ?? 'Faculty',
+                                              data['faculty'] ??
+                                                  'Faculty',
 
                                               style: const TextStyle(
                                                 color: Colors.grey,
@@ -304,7 +324,8 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
                                   _infoRow(
                                     Icons.work_outline,
                                     "Applied For",
-                                    data['opportunityTitle'] ?? 'Opportunity',
+                                    data['opportunityTitle'] ??
+                                        'Opportunity',
                                   ),
 
                                   const SizedBox(height: 10),
@@ -312,7 +333,16 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
                                   _infoRow(
                                     Icons.grade,
                                     "CGPA",
-                                    data['cgpa']?.toString() ?? 'N/A',
+                                    data['cgpa']?.toString() ??
+                                        'N/A',
+                                  ),
+
+                                  const SizedBox(height: 10),
+
+                                  _infoRow(
+                                    Icons.school_outlined,
+                                    "Major",
+                                    data['major'] ?? 'N/A',
                                   ),
 
                                   const SizedBox(height: 10),
@@ -320,7 +350,8 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
                                   _infoRow(
                                     Icons.lightbulb_outline,
                                     "Skills",
-                                    (data['skills'] as List?)?.join(', ') ??
+                                    (data['skills'] as List?)
+                                            ?.join(', ') ??
                                         'No skills',
                                   ),
 
@@ -330,30 +361,65 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
                                     _infoRow(
                                       Icons.phone_outlined,
                                       "Phone",
-                                      data['phone'] ?? 'N/A',
-                                    ),
-
-                                    _infoRow(
-                                      Icons.email_outlined,
-                                      "Email",
-                                      data['studentEmail'] ?? 'No email',
+                                      data['phoneNumber'] ??
+                                          'N/A',
                                     ),
 
                                     const SizedBox(height: 10),
 
                                     _infoRow(
-                                      Icons.badge_outlined,
-                                      "Student ID",
-                                      data['studentId'] ?? 'N/A',
+                                      Icons.email_outlined,
+                                      "Email",
+                                      data['studentEmail'] ??
+                                          'No email',
                                     ),
+
+                                    const SizedBox(height: 10),
+
+                                    if ((data['cvUrl'] ?? '')
+                                        .toString()
+                                        .isNotEmpty)
+                                      SizedBox(
+                                        width: double.infinity,
+
+                                        child: ElevatedButton.icon(
+                                          style:
+                                              ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                fueRed,
+                                          ),
+
+                                          onPressed: () {
+                                            // later open CV
+                                          },
+
+                                          icon: const Icon(
+                                            Icons.picture_as_pdf,
+                                            color: Colors.white,
+                                          ),
+
+                                          label: const Text(
+                                            "View CV",
+
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                   ] else ...[
                                     Container(
-                                      padding: const EdgeInsets.all(14),
+                                      padding:
+                                          const EdgeInsets.all(14),
 
                                       decoration: BoxDecoration(
-                                        color: Colors.orange.withOpacity(0.08),
+                                        color: Colors.orange
+                                            .withOpacity(0.08),
 
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius:
+                                            BorderRadius.circular(
+                                          14,
+                                        ),
                                       ),
 
                                       child: Row(
@@ -372,12 +438,16 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
                                           ),
 
                                           ElevatedButton(
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: fueRed,
+                                            style:
+                                                ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  fueRed,
                                             ),
 
                                             onPressed: () =>
-                                                unlockApplicant(applicantId),
+                                                unlockApplicant(
+                                              applicantId,
+                                            ),
 
                                             child: const Text(
                                               "Unlock",
@@ -394,7 +464,8 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
                                 ],
                               ),
                             ),
-                          );
+                          );                        
+
                         },
                       );
                     },

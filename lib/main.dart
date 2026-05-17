@@ -19,7 +19,6 @@ import 'package:fue_connect/screens/features/VolunteerPage.dart';
 import 'package:fue_connect/screens/features/NotificationPage.dart';
 import 'package:fue_connect/screens/auth/login_screen.dart';
 import 'package:fue_connect/screens/features/SupportPage.dart';
-import 'package:fue_connect/screens/features/OpportunitiesPage.dart';
 import 'package:fue_connect/screens/features/AboutUsPage.dart';
 import 'package:fue_connect/screens/features/GpaCalculator.dart';
 import 'package:fue_connect/screens/features/ChatPage.dart';
@@ -28,6 +27,8 @@ import 'package:fue_connect/screens/features/AcademicCalendarPage.dart';
 import 'package:fue_connect/screens/features/SavedItemsPage.dart';
 import 'package:fue_connect/screens/features/formsPage.dart';
 import 'screens/features/settings_page.dart';
+import 'package:fue_connect/screens/features/jobsPage.dart';
+import 'package:fue_connect/screens/features/internshipsPage.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -63,7 +64,6 @@ class MyApp extends StatelessWidget {
         '/clubs': (context) => const ClubsPage(),
         '/events': (context) => const EventsPage(),
         '/volunteer': (context) => const VolunteerPage(),
-        '/opportunities': (context) => const OpportunitiesPage(),
         '/notification': (context) => const NotificationPage(),
         '/support': (context) => const SupportPage(),
         '/about': (context) => const AboutUsPage(),
@@ -75,6 +75,9 @@ class MyApp extends StatelessWidget {
         '/admin_dashboard': (context) => const AdminDashboardPage(),
         '/settings': (context) => const SettingsPage(),
         '/chat': (context) => const StudentLiveChat(),
+        '/jobs': (context) => const JobsPage(),
+        '/internships': (context) =>
+    const InternshipsPage(),
         '/forms': (context){
           final data = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>; 
           return FormsPage(data: data);

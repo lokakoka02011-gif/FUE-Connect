@@ -67,7 +67,7 @@ class CampusMapPage extends StatelessWidget {
                         Positioned.fill(
                           child: Image.asset(
                             'assets/images/map.png',
-                            fit: BoxFit.contain,
+                            fit: BoxFit.fill,
 
                             errorBuilder: (context, error, stackTrace) {
                               return const Center(
@@ -97,209 +97,259 @@ class CampusMapPage extends StatelessWidget {
                             },
                           ),
                         ),
+// A
+_responsiveBuilding(
+  context,
 
-                        // A
-                        _responsiveBuilding(
-                          context,
+  x: 0.78,
+  y: 0.20,
+  w: 0.13,
+  h: 0.10,
 
-                          x: 0.78,
-                          y: 0.11,
-                          w: 0.15,
-                          h: 0.18,
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
 
-                          mapWidth: mapWidth,
-                          mapHeight: mapHeight,
+  buildingName: "Building A",
 
-                          buildingName: "Building A",
+  faculty: "Faculty of Engineering & Technology",
 
-                          faculty: "Faculty of Engineering & Technology",
+  details:
+      "Contains engineering lecture halls, labs, workshops, and faculty offices.",
+),
 
-                          details:
-                              "Contains engineering lecture halls, labs, workshops, and faculty offices.",
-                        ),
+// A Lower
+_responsiveBuilding(
+  context,
 
-                        // B
-                        _responsiveBuilding(
-                          context,
+  x: 0.84,
+  y: 0.30,
+  w: 0.07,
+  h: 0.14,
 
-                          x: 0.69,
-                          y: 0.40,
-                          w: 0.20,
-                          h: 0.22,
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
 
-                          mapWidth: mapWidth,
-                          mapHeight: mapHeight,
+  buildingName: "Building A",
 
-                          buildingName: "Building B",
+  faculty: "Faculty of Engineering & Technology",
 
-                          faculty:
-                              "Faculty of Computers & Information Technology",
+  details:
+      "Contains engineering lecture halls, labs, workshops, and faculty offices.",
+),
 
-                          details:
-                              "Contains computer labs, programming classrooms, and IT facilities.",
-                        ),
+// B
+_responsiveBuilding(
+  context,
 
-                        // C
-                        _responsiveBuilding(
-                          context,
+  x: 0.81,
+  y: 0.43,
+  w: 0.07,
+  h: 0.20,
+  rotation: -0.72,
+  
 
-                          x: 0.66,
-                          y: 0.18,
-                          w: 0.13,
-                          h: 0.16,
 
-                          mapWidth: mapWidth,
-                          mapHeight: mapHeight,
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
 
-                          buildingName: "Building C",
+  buildingName: "Building B",
 
-                          faculty:
-                              "Faculty of Commerce & Business Administration",
+  faculty:
+      "Faculty of Computers & Information Technology",
 
-                          details:
-                              "Contains business lecture halls, classrooms, and administration offices.",
-                        ),
+  details:
+      "Contains computer labs, programming classrooms, and IT facilities.",
+),
 
-                        // D
-                        _responsiveBuilding(
-                          context,
+// C
+_responsiveBuilding(
+  context,
 
-                          x: 0.50,
-                          y: 0.15,
-                          w: 0.16,
-                          h: 0.33,
+  x: 0.68,
+  y: 0.20,
 
-                          mapWidth: mapWidth,
-                          mapHeight: mapHeight,
+  w: 0.07,
+  h: 0.21,
 
-                          buildingName: "Building D",
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
 
-                          faculty: "Faculty of Pharmacy",
+  buildingName: "Building C",
 
-                          details:
-                              "Contains pharmaceutical labs, lecture halls, and faculty administration.",
-                        ),
+  faculty:
+      "Faculty of Commerce & Business Administration",
 
-                        // E
-                        _responsiveBuilding(
-                          context,
+  details:
+      "Contains business lecture halls, classrooms, and administration offices.",
+),
 
-                          x: 0.55,
-                          y: 0.63,
-                          w: 0.15,
-                          h: 0.11,
+// D TOP
+_responsiveBuilding(
+  context,
 
-                          mapWidth: mapWidth,
-                          mapHeight: mapHeight,
+  x: 0.54,
+  y: 0.20,
+  w: 0.06,
+  h: 0.25,
 
-                          buildingName: "Building E",
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
 
-                          faculty: "Faculty of Economics & Political Science",
+  buildingName: "Building D",
 
-                          details:
-                              "Contains economics and political science lecture halls and classrooms.",
-                        ),
+  faculty: "Faculty of Pharmacy",
 
-                        // F
-                        _responsiveBuilding(
-                          context,
+  details:
+      "Contains pharmaceutical labs, lecture halls, and faculty administration.",
+),
 
-                          x: 0.06,
-                          y: 0.10,
-                          w: 0.23,
-                          h: 0.22,
+// D LOWER
+_responsiveBuilding(
+  context,
 
-                          mapWidth: mapWidth,
-                          mapHeight: mapHeight,
+  x: 0.59,
+  y: 0.4,
+  w: 0.09,
+  h: 0.16,
+  rotation: -0.78,
 
-                          buildingName: "Building F",
 
-                          faculty: "Dental Hospital",
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
 
-                          details:
-                              "Contains dental clinics, treatment rooms, and medical facilities.",
-                        ),
+  buildingName: "Building D",
 
-                        // G
-                        _responsiveBuilding(
-                          context,
+  faculty: "Faculty of Pharmacy",
 
-                          x: 0.08,
-                          y: 0.41,
-                          w: 0.12,
-                          h: 0.10,
+  details:
+      "Contains pharmaceutical labs, lecture halls, and faculty administration.",
+),
 
-                          mapWidth: mapWidth,
-                          mapHeight: mapHeight,
+// E
+_responsiveBuilding(
+  context,
 
-                          buildingName: "Building G",
+  x: 0.55,
+  y: 0.62,
+  w: 0.11,
+  h: 0.09,
 
-                          faculty:
-                              "Pharmaceutical Research & Development Center",
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
 
-                          details:
-                              "Research center dedicated to pharmaceutical development and innovation.",
-                        ),
+  buildingName: "Building E",
 
-                        // H
-                        _responsiveBuilding(
-                          context,
+  faculty: "Faculty of Economics & Political Science",
 
-                          x: 0.11,
-                          y: 0.56,
-                          w: 0.16,
-                          h: 0.16,
+  details:
+      "Contains economics and political science lecture halls and classrooms.",
+),
 
-                          mapWidth: mapWidth,
-                          mapHeight: mapHeight,
+// F
+_responsiveBuilding(
+  context,
 
-                          buildingName: "Building H",
+  x: 0.10,
+  y: 0.20,
+  w: 0.17,
+  h: 0.18,
 
-                          faculty: "Faculty of Oral & Dental Medicine",
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
 
-                          details:
-                              "Contains dental lecture halls, simulation labs, and academic offices.",
-                        ),
+  buildingName: "Building F",
 
-                        // I
-                        _responsiveBuilding(
-                          context,
+  faculty: "Dental Hospital",
 
-                          x: 0.35,
-                          y: 0.15,
-                          w: 0.14,
-                          h: 0.18,
+  details:
+      "Contains dental clinics, treatment rooms, and medical facilities.",
+),
 
-                          mapWidth: mapWidth,
-                          mapHeight: mapHeight,
+// G
+_responsiveBuilding(
+  context,
 
-                          buildingName: "Building I",
+  x: 0.10,
+  y: 0.39,
+  w: 0.10,
+  h: 0.18,
 
-                          faculty: "Food Court",
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
 
-                          details:
-                              "Contains restaurants, cafes, seating areas, and food services.",
-                        ),
+  buildingName: "Building G",
 
-                        // J
-                        _responsiveBuilding(
-                          context,
+  faculty:
+      "Pharmaceutical Research & Development Center",
 
-                          x: 0.72,
-                          y: 0.46,
-                          w: 0.20,
-                          h: 0.22,
+  details:
+      "Research center dedicated to pharmaceutical development and innovation.",
+),
 
-                          mapWidth: mapWidth,
-                          mapHeight: mapHeight,
+// H
+_responsiveBuilding(
+  context,
 
-                          buildingName: "Building J",
+  x: 0.14,
+  y: 0.57,
+  w: 0.08,
+  h: 0.14,
+  rotation: -0.28,
 
-                          faculty: "Main Auditorium",
 
-                          details:
-                              "Used for events, seminars, conferences, and university activities.",
-                        ),
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
+
+  buildingName: "Building H",
+
+  faculty: "Faculty of Oral & Dental Medicine",
+
+  details:
+      "Contains dental lecture halls, simulation labs, and academic offices.",
+),
+
+// I
+_responsiveBuilding(
+  context,
+
+  x: 0.37,
+  y: 0.21,
+  w: 0.11,
+  h: 0.18,
+
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
+
+  buildingName: "Building I",
+
+  faculty: "Food Court",
+
+  details:
+      "Contains restaurants, cafes, seating areas, and food services.",
+),
+
+// J
+_responsiveBuilding(
+  context,
+
+  x: 0.73,
+  y: 0.53,
+  w: 0.1,
+  h: 0.20,
+  rotation: -0.72,
+  
+
+
+  mapWidth: mapWidth,
+  mapHeight: mapHeight,
+
+  buildingName: "Building J",
+
+  faculty: "Main Auditorium",
+
+  details:
+      "Used for events, seminars, conferences, and university activities.",
+),
                       ],
                     );
                   },
@@ -326,6 +376,7 @@ class CampusMapPage extends StatelessWidget {
     required String buildingName,
     required String faculty,
     required String details,
+    double rotation = 0,
   }) {
     return Positioned(
       left: mapWidth * x,
@@ -336,10 +387,17 @@ class CampusMapPage extends StatelessWidget {
           _showBuildingInfo(context, buildingName, faculty, details);
         },
 
-        child: Container(
-          width: mapWidth * w,
-          height: mapHeight * h,
-          color: Colors.transparent,
+        child: Transform.rotate(
+          angle: rotation,
+
+          child: Container(
+            width: mapWidth * w,
+            height: mapHeight * h,
+
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+            ),
+          ),
         ),
       ),
     );

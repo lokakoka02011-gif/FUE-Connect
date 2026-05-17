@@ -185,13 +185,21 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
 
-                      Expanded(
-                        child: CategoryItem(
-                          icon: Icons.work_rounded,
-                          label: "Opportunities",
-                          routeName: "/opportunities",
-                        ),
+                     Expanded(
+                      child: CategoryItem(
+                        icon: Icons.school_rounded,
+                        label: "Internships",
+                        routeName: "/internships",
                       ),
+                    ),
+
+                    Expanded(
+                      child: CategoryItem(
+                        icon: Icons.work_rounded,
+                        label: "Jobs",
+                        routeName: "/jobs",
+                      ),
+                    ),
                     ],
                   ),
                 ),

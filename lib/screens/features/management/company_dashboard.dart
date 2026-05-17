@@ -26,15 +26,19 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
   bool companyProfileCompleted = false;
 
   String subscriptionPlan = "free";
+
   int totalPosts = 0;
   int approvedPosts = 0;
   int rejectedPosts = 0;
   int applicationsCount = 0;
+
   int postsLimit = 1;
   int unlockLimit = 10;
 
   bool featuredAllowed = false;
+
   Timestamp? subscriptionEnd;
+
   bool subscriptionActive = true;
 
   @override
@@ -60,18 +64,18 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
       approvalStatus = userData['approvalStatus'] ?? "pending";
 
-      companyProfileCompleted = userData['companyProfileCompleted'] ?? false;
+      companyProfileCompleted =
+          userData['companyProfileCompleted'] ?? false;
 
       subscriptionPlan = userData['subscriptionPlan'] ?? "free";
 
       subscriptionEnd = userData['subscriptionEnd'];
+
       subscriptionActive = userData['subscriptionActive'] ?? true;
 
       if (subscriptionPlan == "silver") {
         postsLimit = 5;
-
         unlockLimit = 50;
-
         featuredAllowed = false;
       } else if (subscriptionPlan == "gold") {
         postsLimit = -1;
@@ -85,18 +89,20 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
       if (subscriptionEnd != null) {
         final expiryDate = subscriptionEnd!.toDate();
+
         if (DateTime.now().isAfter(expiryDate)) {
           await FirebaseFirestore.instance
               .collection('users')
               .doc(currentUser.uid)
               .update({
-                "subscriptionPlan": "free",
-                "subscriptionActive": false,
-                "subscriptionEnd": null,
-              });
+            "subscriptionPlan": "free",
+            "subscriptionActive": false,
+            "subscriptionEnd": null,
+          });
 
           subscriptionPlan = "free";
           subscriptionActive = false;
+
           postsLimit = 1;
           unlockLimit = 10;
           featuredAllowed = false;
@@ -156,9 +162,9 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+        ),
         (route) => false,
       );
     }
@@ -167,55 +173,54 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
   @override
   Widget build(BuildContext context) {
     if (!companyProfileCompleted && !_isLoading) {
-      return CompleteCompanyProfilePage(onComplete: loadCompanyData);
+      return CompleteCompanyProfilePage(
+        onComplete: loadCompanyData,
+      );
     }
 
     if (approvalStatus != "approved" && !_isLoading) {
       return Scaffold(
         backgroundColor: Colors.grey[100],
-
         appBar: AppBar(
           automaticallyImplyLeading: false,
-
           title: const Text("Pending Approval"),
-
           backgroundColor: fueRed,
-
           foregroundColor: Colors.white,
-
           actions: [
-            IconButton(onPressed: logout, icon: const Icon(Icons.logout)),
+            IconButton(
+              onPressed: logout,
+              icon: const Icon(Icons.logout),
+            ),
           ],
         ),
-
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-
               children: [
-                Icon(Icons.hourglass_top_rounded, size: 90, color: fueRed),
-
+                Icon(
+                  Icons.hourglass_top_rounded,
+                  size: 90,
+                  color: fueRed,
+                ),
                 const SizedBox(height: 24),
-
                 const Text(
                   "Your company account is waiting for admin approval.",
-
                   textAlign: TextAlign.center,
-
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-
                 const SizedBox(height: 14),
-
                 const Text(
                   "You will gain access once an administrator reviews your company.",
-
                   textAlign: TextAlign.center,
-
-                  style: TextStyle(color: Colors.grey, fontSize: 15),
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 15,
+                  ),
                 ),
               ],
             ),
@@ -226,66 +231,53 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
-
       appBar: AppBar(
         automaticallyImplyLeading: false,
-
         title: const Text("Company Dashboard"),
-
         backgroundColor: fueRed,
-
         foregroundColor: Colors.white,
-
         elevation: 0,
-
         actions: [
-          IconButton(onPressed: logout, icon: const Icon(Icons.logout)),
+          IconButton(
+            onPressed: logout,
+            icon: const Icon(Icons.logout),
+          ),
         ],
       ),
-
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-
                 children: [
-                  // welcome card
                   Container(
                     width: double.infinity,
-
                     padding: const EdgeInsets.all(22),
-
                     decoration: BoxDecoration(
                       color: fueRed,
-
                       borderRadius: BorderRadius.circular(24),
                     ),
-
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-
                       children: [
                         Text(
                           "Welcome $companyName 👋",
-
                           style: const TextStyle(
                             color: Colors.white,
-
                             fontSize: 26,
-
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-
                         const SizedBox(height: 8),
-
                         const Text(
                           "Manage opportunities, applicants, and subscriptions.",
-
-                          style: TextStyle(color: Colors.white70, fontSize: 14),
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
                         ),
                       ],
                     ),
@@ -293,47 +285,49 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
                   const SizedBox(height: 20),
 
-                  // my subscription
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const SubscriptionPlansPage(),
+                          builder: (_) =>
+                              const SubscriptionPlansPage(),
                         ),
                       );
                     },
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(18),
-
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
-
-                        border: Border.all(color: fueRed, width: 2),
+                        border: Border.all(
+                          color: fueRed,
+                          width: 2,
+                        ),
                       ),
-
                       child: Row(
                         children: [
-                          Icon(Icons.workspace_premium, color: fueRed),
-
+                          Icon(
+                            Icons.workspace_premium,
+                            color: fueRed,
+                          ),
                           const SizedBox(width: 12),
-
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
                                 const Text(
                                   "MY SUBSCRIPTION",
-
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-
                                 const SizedBox(height: 4),
                                 Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       "${subscriptionPlan.toUpperCase()} "
@@ -344,7 +338,10 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
                                     ),
                                     if (subscriptionEnd != null)
                                       Padding(
-                                        padding: const EdgeInsets.only(top: 4),
+                                        padding:
+                                            const EdgeInsets.only(
+                                          top: 4,
+                                        ),
                                         child: Text(
                                           "Expires: "
                                           "${subscriptionEnd!.toDate().day}/"
@@ -361,8 +358,10 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
                               ],
                             ),
                           ),
-
-                          const Icon(Icons.arrow_forward_ios, size: 18),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 18,
+                          ),
                         ],
                       ),
                     ),
@@ -370,20 +369,14 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
                   const SizedBox(height: 20),
 
-                  // analytics
                   GridView.count(
                     crossAxisCount: 4,
-
                     shrinkWrap: true,
-
-                    physics: const NeverScrollableScrollPhysics(),
-
+                    physics:
+                        const NeverScrollableScrollPhysics(),
                     crossAxisSpacing: 8,
-
                     mainAxisSpacing: 8,
-
                     childAspectRatio: 0.9,
-
                     children: [
                       _miniStatCard(
                         value: totalPosts.toString(),
@@ -391,21 +384,18 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
                         icon: Icons.work,
                         color: fueRed,
                       ),
-
                       _miniStatCard(
                         value: approvedPosts.toString(),
                         label: "Approved",
                         icon: Icons.check,
                         color: Colors.green,
                       ),
-
                       _miniStatCard(
                         value: rejectedPosts.toString(),
                         label: "Rejected",
                         icon: Icons.close,
                         color: Colors.red,
                       ),
-
                       _miniStatCard(
                         value: applicationsCount.toString(),
                         label: "Applicants",
@@ -419,22 +409,20 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
                   const Text(
                     "Quick Actions",
-
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
 
                   const SizedBox(height: 16),
 
                   _buildDashboardCard(
                     context: context,
-
                     icon: Icons.work_outline,
                     title: "Manage Opportunities",
-
                     subtitle: "Edit and manage your posts",
-
                     color: fueRed,
-
                     onTap: () {
                       Navigator.push(
                         context,
@@ -455,11 +443,14 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
                     context: context,
                     icon: Icons.add_circle_outline,
                     title: "Add Opportunity",
-                    subtitle: "Create a new job or internship",
+                    subtitle:
+                        "Create a new job or internship",
                     color: Colors.green,
                     onTap: () {
-                      if (postsLimit != -1 && totalPosts >= postsLimit) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                      if (postsLimit != -1 &&
+                          totalPosts >= postsLimit) {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(
                           SnackBar(
                             backgroundColor: Colors.red,
                             content: Text(
@@ -475,10 +466,11 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
                       Navigator.push(
                         context,
-
                         MaterialPageRoute(
-                          builder: (_) => const AddEditItemPage(
-                            collectionPath: 'opportunities',
+                          builder: (_) =>
+                              const AddEditItemPage(
+                            collectionPath:
+                                'opportunities',
                           ),
                         ),
                       );
@@ -489,21 +481,17 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
                   _buildDashboardCard(
                     context: context,
-
                     icon: Icons.groups_outlined,
-
                     title: "Applicants",
-
-                    subtitle: "View student applications",
-
+                    subtitle:
+                        "View student applications",
                     color: Colors.orange,
-
                     onTap: () {
                       Navigator.push(
                         context,
-
                         MaterialPageRoute(
-                          builder: (_) => const ApplicantsPage(),
+                          builder: (_) =>
+                              const ApplicantsPage(),
                         ),
                       );
                     },
@@ -516,43 +504,49 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
   Widget _miniStatCard({
     required String value,
-
     required String label,
-
     required IconData icon,
-
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-
+      padding: const EdgeInsets.symmetric(
+        vertical: 10,
+        horizontal: 6,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-
         borderRadius: BorderRadius.circular(16),
-
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+          ),
         ],
       ),
-
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-
         children: [
-          Icon(icon, color: color, size: 18),
-
+          Icon(
+            icon,
+            color: color,
+            size: 18,
+          ),
           const SizedBox(height: 6),
-
           Text(
             value,
-
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
-
           const SizedBox(height: 2),
-
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Colors.grey,
+            ),
+          ),
         ],
       ),
     );
@@ -560,43 +554,40 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
   Widget _buildDashboardCard({
     required BuildContext context,
-
     required IconData icon,
-
     required String title,
-
     required String subtitle,
-
     required Color color,
-
     required VoidCallback onTap,
   }) {
     return Card(
       elevation: 1,
-
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
-
         leading: Container(
           padding: const EdgeInsets.all(12),
-
           decoration: BoxDecoration(
             color: color.withOpacity(0.12),
-
             borderRadius: BorderRadius.circular(14),
           ),
-
-          child: Icon(icon, color: color),
+          child: Icon(
+            icon,
+            color: color,
+          ),
         ),
-
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         subtitle: Text(subtitle),
-
-        trailing: const Icon(Icons.arrow_forward_ios),
-
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+        ),
         onTap: onTap,
       ),
     );
@@ -606,7 +597,10 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 class CompleteCompanyProfilePage extends StatefulWidget {
   final VoidCallback onComplete;
 
-  const CompleteCompanyProfilePage({super.key, required this.onComplete});
+  const CompleteCompanyProfilePage({
+    super.key,
+    required this.onComplete,
+  });
 
   @override
   State<CompleteCompanyProfilePage> createState() =>
@@ -615,25 +609,68 @@ class CompleteCompanyProfilePage extends StatefulWidget {
 
 class _CompleteCompanyProfilePageState
     extends State<CompleteCompanyProfilePage> {
-  final companyNameController = TextEditingController();
+  final Color fueRed = const Color(0xffb1170c);
 
-  final descriptionController = TextEditingController();
+  final companyNameController =
+      TextEditingController();
 
-  final websiteController = TextEditingController();
+  final descriptionController =
+      TextEditingController();
 
-  final locationController = TextEditingController();
+  final industryController =
+      TextEditingController();
+
+  final websiteController =
+      TextEditingController();
+
+  final emailController =
+      TextEditingController();
+
+  final phoneController =
+      TextEditingController();
+
+  final addressController =
+      TextEditingController();
+
+  final tinController =
+      TextEditingController();
+
+  final commercialRegistrationController =
+      TextEditingController();
+
+  final logoController =
+      TextEditingController();
 
   bool isLoading = false;
 
-  final Color fueRed = const Color(0xffb1170c);
-
   Future<void> saveCompanyData() async {
+    if (companyNameController.text.trim().isEmpty ||
+        descriptionController.text.trim().isEmpty ||
+        industryController.text.trim().isEmpty ||
+        emailController.text.trim().isEmpty ||
+        phoneController.text.trim().isEmpty ||
+        addressController.text.trim().isEmpty ||
+        commercialRegistrationController.text
+            .trim()
+            .isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Please fill all required fields",
+          ),
+        ),
+      );
+
+      return;
+    }
+
     setState(() {
       isLoading = true;
     });
 
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
+      final currentUser =
+          FirebaseAuth.instance.currentUser;
 
       if (currentUser == null) return;
 
@@ -641,24 +678,53 @@ class _CompleteCompanyProfilePageState
           .collection('users')
           .doc(currentUser.uid)
           .update({
-            "companyName": companyNameController.text,
+        "companyName":
+            companyNameController.text.trim(),
 
-            "companyDescription": descriptionController.text,
+        "companyDescription":
+            descriptionController.text.trim(),
 
-            "companyWebsite": websiteController.text,
+        "industry":
+            industryController.text.trim(),
 
-            "companyLocation": locationController.text,
+        "companyWebsite":
+            websiteController.text.trim(),
 
-            "companyProfileCompleted": true,
+        "companyEmail":
+            emailController.text.trim(),
 
-            "approvalStatus": "pending",
-          });
+        "companyPhone":
+            phoneController.text.trim(),
+
+        "companyAddress":
+            addressController.text.trim(),
+
+        "taxIdentificationNumber":
+            tinController.text.trim(),
+
+        "commercialRegistrationNumber":
+            commercialRegistrationController.text
+                .trim(),
+
+        "companyLogo":
+            logoController.text.trim(),
+
+        "verificationStatus": "pending",
+
+        "companyProfileCompleted": true,
+
+        "approvalStatus": "pending",
+
+        "createdAt": Timestamp.now(),
+      });
 
       widget.onComplete();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+        ),
+      );
     } finally {
       setState(() {
         isLoading = false;
@@ -673,73 +739,123 @@ class _CompleteCompanyProfilePageState
 
       appBar: AppBar(
         automaticallyImplyLeading: false,
-
-        title: const Text("Complete Company Profile"),
-
+        title:
+            const Text("Complete Company Profile"),
         backgroundColor: fueRed,
-
         foregroundColor: Colors.white,
       ),
 
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-
         child: Column(
           children: [
             _buildField(
               controller: companyNameController,
-              label: "Company Name",
+              label: "Company Name *",
             ),
 
             const SizedBox(height: 16),
 
             _buildField(
               controller: descriptionController,
-              label: "Company Description",
+              label:
+                  "Company Description *",
               maxLines: 4,
             ),
 
             const SizedBox(height: 16),
 
             _buildField(
-              controller: websiteController,
-              label: "Company Website",
+              controller: industryController,
+              label: "Industry *",
             ),
 
             const SizedBox(height: 16),
 
             _buildField(
-              controller: locationController,
-              label: "Company Location",
+              controller: websiteController,
+              label: "Official Website",
+            ),
+
+            const SizedBox(height: 16),
+
+            _buildField(
+              controller: emailController,
+              label: "Company Email *",
+              keyboardType:
+                  TextInputType.emailAddress,
+            ),
+
+            const SizedBox(height: 16),
+
+            _buildField(
+              controller: phoneController,
+              label: "Phone Number *",
+              keyboardType:
+                  TextInputType.phone,
+            ),
+
+            const SizedBox(height: 16),
+
+            _buildField(
+              controller: addressController,
+              label: "Company Address *",
+              maxLines: 2,
+            ),
+
+            const SizedBox(height: 16),
+
+            _buildField(
+              controller: tinController,
+              label: "TIN / Tax Number",
+            ),
+
+            const SizedBox(height: 16),
+
+            _buildField(
+              controller:
+                  commercialRegistrationController,
+              label:
+                  "Commercial Registration Number *",
+            ),
+
+            const SizedBox(height: 16),
+
+            _buildField(
+              controller: logoController,
+              label: "Company Logo URL",
             ),
 
             const SizedBox(height: 30),
 
             SizedBox(
               width: double.infinity,
-
               height: 55,
-
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
+                style:
+                    ElevatedButton.styleFrom(
                   backgroundColor: fueRed,
-
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                  shape:
+                      RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(
+                            16),
                   ),
                 ),
-
-                onPressed: isLoading ? null : saveCompanyData,
-
+                onPressed:
+                    isLoading
+                        ? null
+                        : saveCompanyData,
                 child: isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? const CircularProgressIndicator(
+                        color: Colors.white,
+                      )
                     : const Text(
                         "SAVE COMPANY INFO",
-
                         style: TextStyle(
                           color: Colors.white,
-
-                          fontWeight: FontWeight.bold,
+                          fontWeight:
+                              FontWeight.bold,
                         ),
                       ),
               ),
@@ -752,26 +868,22 @@ class _CompleteCompanyProfilePageState
 
   Widget _buildField({
     required TextEditingController controller,
-
     required String label,
-
     int maxLines = 1,
+    TextInputType keyboardType =
+        TextInputType.text,
   }) {
     return TextField(
       controller: controller,
-
       maxLines: maxLines,
-
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
-
         filled: true,
-
         fillColor: Colors.white,
-
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-
+          borderRadius:
+              BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
       ),
@@ -783,11 +895,14 @@ class SubscriptionPlansPage extends StatefulWidget {
   const SubscriptionPlansPage({super.key});
 
   @override
-  State<SubscriptionPlansPage> createState() => _SubscriptionPlansPageState();
+  State<SubscriptionPlansPage> createState() =>
+      _SubscriptionPlansPageState();
 }
 
-class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
-  final Color fueRed = const Color(0xffb1170c);
+class _SubscriptionPlansPageState
+    extends State<SubscriptionPlansPage> {
+  final Color fueRed =
+      const Color(0xffb1170c);
 
   bool silver6Months = false;
 
@@ -797,286 +912,13 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-
         title: const Text("My Subscription"),
-
         backgroundColor: fueRed,
-
         foregroundColor: Colors.white,
       ),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-
-          children: [
-            // current plan
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-
-              decoration: BoxDecoration(
-                color: Colors.white,
-
-                borderRadius: BorderRadius.circular(22),
-
-                border: Border.all(color: fueRed, width: 2),
-              ),
-
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-
-                children: [
-                  const Text(
-                    "CURRENT PLAN",
-
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  const Text(
-                    "FREE",
-
-                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  _usageRow("Posts Remaining", "1"),
-
-                  const SizedBox(height: 12),
-
-                  _usageRow("Applicant Unlocks", "10"),
-
-                  const SizedBox(height: 12),
-
-                  _usageRow("Featured Posts", "Unavailable"),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            const Text(
-              "Upgrade Plans",
-
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 18),
-
-            _planCard(
-              title: "SILVER",
-
-              monthlyPrice: "299 EGP",
-
-              sixMonthPrice: "1499 EGP",
-
-              sixMonths: silver6Months,
-
-              color: Colors.grey,
-
-              features: [
-                "5 active posts",
-
-                "50 applicant unlocks",
-
-                "Priority review",
-
-                "Longer visibility",
-              ],
-
-              onChanged: (value) {
-                setState(() {
-                  silver6Months = value;
-                });
-              },
-            ),
-
-            const SizedBox(height: 20),
-
-            _planCard(
-              title: "GOLD",
-
-              monthlyPrice: "599 EGP",
-
-              sixMonthPrice: "2999 EGP",
-
-              sixMonths: gold6Months,
-
-              color: const Color(0xffD4AF37),
-
-              features: [
-                "Unlimited posts",
-
-                "Unlimited unlocks",
-
-                "Featured opportunities",
-
-                "Homepage priority",
-
-                "Highest visibility",
-              ],
-
-              onChanged: (value) {
-                setState(() {
-                  gold6Months = value;
-                });
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _usageRow(String title, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-      children: [
-        Text(title, style: const TextStyle(color: Colors.grey)),
-
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  Widget _planCard({
-    required String title,
-
-    required String monthlyPrice,
-
-    required String sixMonthPrice,
-
-    required bool sixMonths,
-
-    required Color color,
-
-    required List<String> features,
-
-    required Function(bool) onChanged,
-  }) {
-    return Container(
-      width: double.infinity,
-
-      padding: const EdgeInsets.all(20),
-
-      decoration: BoxDecoration(
-        color: Colors.white,
-
-        borderRadius: BorderRadius.circular(22),
-
-        border: Border.all(color: color.withOpacity(0.5), width: 2),
-      ),
-
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-            children: [
-              Text(
-                title,
-
-                style: TextStyle(
-                  fontSize: 28,
-
-                  fontWeight: FontWeight.bold,
-
-                  color: color,
-                ),
-              ),
-
-              Switch(
-                value: sixMonths,
-
-                activeColor: color,
-
-                onChanged: onChanged,
-              ),
-            ],
-          ),
-
-          Text(
-            sixMonths ? "6 Months" : "Monthly",
-
-            style: const TextStyle(color: Colors.grey),
-          ),
-
-          const SizedBox(height: 20),
-
-          Text(
-            sixMonths ? sixMonthPrice : monthlyPrice,
-
-            style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 20),
-
-          ...features.map(
-            (feature) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-
-              child: Row(
-                children: [
-                  Icon(Icons.check_circle, color: color, size: 22),
-
-                  const SizedBox(width: 10),
-
-                  Expanded(child: Text(feature)),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          SizedBox(
-            width: double.infinity,
-
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-
-                padding: const EdgeInsets.symmetric(vertical: 16),
-
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Call us on 1234 to subscribe")),
-                );
-              },
-
-              child: const Text(
-                "CALL US ON 1234",
-
-                style: TextStyle(
-                  color: Colors.white,
-
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ],
+      body: const Center(
+        child: Text("Subscription Plans"),
       ),
     );
   }
