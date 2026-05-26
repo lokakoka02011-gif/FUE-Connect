@@ -32,101 +32,112 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
+ Future<void> _login() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    // convert input to lowercase w removes spaces
-    final input =
-        _emailController.text.trim().toLowerCase();
+  final input =
+      _emailController.text.trim().toLowerCase();
 
-    String fullEmail;
+  String fullEmail;
 
-    // if full email already entered
-    if (input.contains('@')) {
+  if (input.contains('@')) {
+    fullEmail = input;
+  } else {
+    fullEmail = "$input@fue.edu.eg";
+  }
 
-      fullEmail = input;
+  try {
+    print("LOGIN STEP 1");
 
-    } else {
+    final userCredential =
+        await _authService.loginWithEmail(
+      email: fullEmail,
+      password: _passwordController.text,
+    );
 
-      // students/admins auto use fue domain
-      fullEmail = "$input@fue.edu.eg";
+    print("LOGIN STEP 2");
+
+    if (userCredential == null ||
+        userCredential.user == null) {
+      throw Exception("Login failed");
     }
 
-    try {
-      await _authService.loginWithEmail(
-        email: fullEmail,
-        password: _passwordController.text,
+    final uid = userCredential.user!.uid;
+
+    print("UID: $uid");
+
+    print("LOGIN STEP 3");
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+
+    print("DOC EXISTS: ${userDoc.exists}");
+
+    if (!userDoc.exists || userDoc.data() == null) {
+      throw Exception(
+        "User document missing in Firestore",
       );
+    }
 
-      // get role from firestore
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(_authService.currentUser!.uid)
-          .get();
+    final userData = userDoc.data()!;
 
-      final userData =
-          userDoc.data() as Map<String, dynamic>;
+    final role = userData['role'] ?? 'student';
 
-      final role = userData['role'];
+    print("ROLE: $role");
 
-      if (mounted) {
+    print("LOGIN STEP 4");
 
-        // student -> main app
-        if (role == "student") {
+    if (!mounted) return;
 
-          Navigator.pushReplacementNamed(
-            context,
-            '/main',
-          );
+    if (role == "student") {
+      Navigator.pushReplacementNamed(
+        context,
+        '/main',
+      );
+    } else if (role == "admin") {
+      Navigator.pushReplacementNamed(
+        context,
+        '/admin_dashboard',
+      );
+    } else if (role == "company") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              const CompanyDashboard(),
+        ),
+      );
+    } else {
+      throw Exception("Unknown role: $role");
+    }
 
-        }
+    print("LOGIN STEP 5");
 
-        // admin -> admin dashboard
-        else if (role == "admin") {
+  } catch (e) {
 
-          Navigator.pushReplacementNamed(
-            context,
-            '/admin_dashboard',
-          );
+    print("LOGIN ERROR:");
+    print(e);
 
-        }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
 
-        // company -> company dashboard
-        else if (role == "company") {
+  } finally {
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) =>
-                  const CompanyDashboard(),
-            ),
-          );
-        }
-      }
-
-    } catch (e) {
-
-      // error message l wrong email aw wrong password
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Wrong password or email. Please try again.",
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-
-    } finally {
-
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
 
   Future<void> _resetPassword() async {
 

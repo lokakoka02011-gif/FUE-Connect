@@ -9,12 +9,15 @@ class ManageItemsPage extends StatefulWidget {
   final String title;
   final bool isAdmin;
   final String collectionPath;
+  final String? itemType;
 
   const ManageItemsPage({
     super.key,
     required this.title,
     required this.collectionPath,
     this.isAdmin = false,
+    this.itemType,
+
   });
 
   @override
@@ -174,15 +177,29 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
           // LIST
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection(widget.collectionPath)
-                  .orderBy("createdAt", descending: true)
-                  .snapshots(),
+              stream: (() {
+                Query query = FirebaseFirestore.instance
+                    .collection(widget.collectionPath);
 
+                if (widget.itemType != null) {
+                  query = query.where(
+                    'type',
+                    isEqualTo: widget.itemType,
+                  );
+                }
+
+                return query
+                    .orderBy("createdAt", descending: true)
+                    .snapshots();
+              })(),
               builder: (context, snapshot) {
                 // ERROR
                 if (snapshot.hasError) {
-                  return const Center(child: Text("Something went wrong"));
+                  return Center(
+                    child: Text(
+                      snapshot.error.toString(),
+                    ),
+                  );
                 }
 
                 // LOADING
@@ -258,7 +275,8 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
                     final displayTitle =
                         // USERS
                         isUsers
-                        ? data['studentId'] ??
+                        ? data['fullName'] ??
+                              data['studentId'] ??
                               data['id'] ??
                               data['email']?.toString().split("@").first ??
                               "Unknown Student"
@@ -269,11 +287,28 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
                         : data['title'] ?? data['name'] ?? "No Title";
 
                     // DISPLAY SUBTITLE
-                    final displaySubtitle =
-                        data['description'] ??
-                        data['content'] ??
-                        data['bio'] ??
-                        "";
+                    final displaySubtitle = isUsers
+                        ? """
+                    Email: ${data['email'] ?? 'N/A'}
+
+                    Phone: ${data['phone'] ?? 'N/A'}
+
+                    Faculty: ${data['faculty'] ?? 'N/A'}
+
+                    Year: ${data['year'] ?? 'N/A'}
+
+                    GPA: ${data['gpa'] ?? 'N/A'}
+
+                    Skills: ${data['skills'] is List ? (data['skills'] as List).join(', ') : data['skills'] ?? 'N/A'}
+
+                    Interests: ${data['interests'] is List ? (data['interests'] as List).join(', ') : data['interests'] ?? 'N/A'}
+
+                    Bio: ${data['bio'] ?? 'N/A'}
+                    """
+                        : data['description'] ??
+                              data['content'] ??
+                              data['bio'] ??
+                              "";
 
                     return Card(
                       margin: const EdgeInsets.symmetric(
@@ -288,7 +323,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
                       ),
 
                       child: Padding(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(12),
 
                         child: Column(
                           children: [
@@ -405,7 +440,7 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
                                   Text(
                                     displaySubtitle,
 
-                                    maxLines: 2,
+                                    maxLines: isUsers ? 20 : 2,
 
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -504,17 +539,17 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
 
                               children: [
                                 // EDIT
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
+                                if (!isUsers)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      color: Colors.blue,
+                                    ),
 
-                                    color: Colors.blue,
+                                    onPressed: () {
+                                      openEditor(docId: docId, data: data);
+                                    },
                                   ),
-
-                                  onPressed: () {
-                                    openEditor(docId: docId, data: data);
-                                  },
-                                ),
 
                                 // DELETE
                                 IconButton(
@@ -541,15 +576,17 @@ class _ManageItemsPageState extends State<ManageItemsPage> {
       ),
 
       // ADD BUTTON
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: fueRed,
+      floatingActionButton: isUsers
+          ? null
+          : FloatingActionButton(
+              backgroundColor: fueRed,
 
-        child: const Icon(Icons.add, color: Colors.white),
+              child: const Icon(Icons.add, color: Colors.white),
 
-        onPressed: () {
-          openEditor();
-        },
-      ),
+              onPressed: () {
+                openEditor();
+              },
+            ),
     );
   }
 }

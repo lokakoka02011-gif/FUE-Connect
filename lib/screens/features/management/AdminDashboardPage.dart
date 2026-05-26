@@ -18,10 +18,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   int studentsCount = 0;
   int clubsCount = 0;
   int eventsCount = 0;
-  int opportunitiesCount = 0;
+  int jobsCount = 0;
+  int internshipsCount = 0;
   int volunteeringCount = 0;
   int postsCount = 0;
-  int unreadChatsCount = 0;
   int companiesCount = 0;
 
   // LOGOUT
@@ -88,16 +88,30 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         eventsCount = snapshot.docs.length;
       });
     });
-
-    FirebaseFirestore.instance.collection('opportunities').snapshots().listen((
-      snapshot,
-    ) {
-      setState(() {
-        opportunitiesCount = snapshot.docs.length;
+      FirebaseFirestore.instance
+          .collection('opportunities')
+          .where('type', isEqualTo: 'job')
+          .snapshots()
+          .listen((snapshot) {
+        setState(() {
+          jobsCount = snapshot.docs.length;
+        });
       });
-    });
 
-    FirebaseFirestore.instance.collection('volunteer').snapshots().listen((
+      FirebaseFirestore.instance
+          .collection('opportunities')
+          .where('type', isEqualTo: 'internship')
+          .snapshots()
+          .listen((snapshot) {
+        setState(() {
+          internshipsCount = snapshot.docs.length;
+        });
+      });
+
+ 
+
+
+    FirebaseFirestore.instance.collection('volunteering').snapshots().listen((
       snapshot,
     ) {
       setState(() {
@@ -120,16 +134,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         .listen((snapshot) {
           setState(() {
             companiesCount = snapshot.docs.length;
-          });
-        });
-
-    FirebaseFirestore.instance
-        .collection('messages')
-        .where('isReadByAdmin', isEqualTo: false)
-        .snapshots()
-        .listen((snapshot) {
-          setState(() {
-            unreadChatsCount = snapshot.docs.length;
           });
         });
   }
@@ -260,11 +264,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                           studentsCount,
                           clubsCount,
                           eventsCount,
-                          opportunitiesCount,
+                          jobsCount,
+                          internshipsCount,
                           volunteeringCount,
                           postsCount,
                           companiesCount,
-                          unreadChatsCount,
                         ].reduce((a, b) => a > b ? a : b).toDouble() +
                         5,
 
@@ -349,27 +353,29 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
                               case 4:
                                 return const Text(
-                                  "Volunteer",
+                                  "Internships",
                                   style: TextStyle(fontSize: 10),
                                 );
 
+
                               case 5:
                                 return const Text(
-                                  "Posts",
+                                  "Volunteer",
                                   style: TextStyle(fontSize: 10),
                                 );
 
                               case 6:
                                 return const Text(
-                                  "Companies",
+                                  "Posts",
                                   style: TextStyle(fontSize: 10),
                                 );
 
                               case 7:
                                 return const Text(
-                                  "Chats",
+                                  "Companies",
                                   style: TextStyle(fontSize: 10),
                                 );
+
 
                               default:
                                 return const SizedBox();
@@ -386,19 +392,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
                       _barGroup(2, eventsCount.toDouble(), Colors.green),
 
-                      _barGroup(
-                        3,
-                        opportunitiesCount.toDouble(),
-                        Colors.orange,
-                      ),
+                      _barGroup(3, jobsCount.toDouble(), Colors.orange,),
 
-                      _barGroup(4, volunteeringCount.toDouble(), Colors.purple),
+                      _barGroup(4, internshipsCount.toDouble(), Colors.indigo),
 
-                      _barGroup(5, postsCount.toDouble(), Colors.teal),
+                      _barGroup(5, volunteeringCount.toDouble(), Colors.purple),
 
-                      _barGroup(6, companiesCount.toDouble(), Colors.red),
+                      _barGroup(6, postsCount.toDouble(), Colors.teal),
 
-                      _barGroup(7, unreadChatsCount.toDouble(), Colors.indigo),
+                      _barGroup(7, companiesCount.toDouble(), Colors.red),
+
                     ],
                   ),
                 ),
@@ -513,32 +516,50 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     },
                   ),
 
-                  // OPPORTUNITIES
+                  // JOBS
                   _dashboardCard(
                     context,
-
-                    "Opportunities",
-
-                    opportunitiesCount.toString(),
-
+                    "Jobs",
+                    jobsCount.toString(),
                     Icons.work,
-
                     Colors.orange,
-
                     () {
                       Navigator.push(
                         context,
-
                         MaterialPageRoute(
                           builder: (_) => ManageItemsPage(
-                            title: "Opportunities",
+                            title: "Jobs",
                             collectionPath: "opportunities",
                             isAdmin: true,
+                            itemType: "job",
                           ),
                         ),
                       );
                     },
                   ),
+
+                  // INTERNSHIPS
+                  _dashboardCard(
+                    context,
+                    "Internships",
+                    internshipsCount.toString(),
+                    Icons.school,
+                    Colors.indigo,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ManageItemsPage(
+                            title: "Internships",
+                            collectionPath: "opportunities",
+                            isAdmin: true,
+                            itemType: "internship",
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
 
                   // VOLUNTEERING
                   _dashboardCard(

@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:fue_connect/screens/features/MyApplications.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -115,395 +116,261 @@ class _AccountPageState extends State<AccountPage> {
 
     if (!isComplete) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showProfileDialog(
-          firstTime: true,
-        );
+        _showProfileDialog(firstTime: true);
       });
     }
   }
 
-Future<void> _showProfileDialog({
-  bool firstTime = false,
-}) async {
-  final user = FirebaseAuth.instance.currentUser;
+  Future<void> _showProfileDialog({bool firstTime = false}) async {
+    final user = FirebaseAuth.instance.currentUser;
 
-  final doc = await FirebaseFirestore.instance
-      .collection(usersCollection)
-      .doc(uid)
-      .get();
+    final doc = await FirebaseFirestore.instance
+        .collection(usersCollection)
+        .doc(uid)
+        .get();
 
-  final data = doc.data() ?? {};
+    final data = doc.data() ?? {};
 
-  selectedFaculty = data['faculty'];
+    selectedFaculty = data['faculty'];
 
-  int? selectedAcademicYear =
-      data['academicYear'];
+    int? selectedAcademicYear = data['academicYear'];
 
-  final nameController = TextEditingController(
-    text:
-        data['fullName'] ??
-        '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}',
-  );
+    final nameController = TextEditingController(
+      text:
+          data['fullName'] ??
+          '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}',
+    );
 
-  final emailController =
-      TextEditingController(
-    text: user?.email ?? "",
-  );
+    final emailController = TextEditingController(text: user?.email ?? "");
 
-  final majorController =
-      TextEditingController(
-    text: data['major'] ?? "",
-  );
+    final majorController = TextEditingController(text: data['major'] ?? "");
 
-  final minorController =
-      TextEditingController(
-    text: data['minor'] ?? "",
-  );
+    final minorController = TextEditingController(text: data['minor'] ?? "");
 
-  final cgpaController =
-      TextEditingController(
-    text:
-        data['cgpa']?.toString() ?? "",
-  );
+    final cgpaController = TextEditingController(
+      text: data['cgpa']?.toString() ?? "",
+    );
 
-  final phoneController =
-      TextEditingController(
-    text:
-        data['phoneNumber'] ?? "",
-  );
+    final phoneController = TextEditingController(
+      text: data['phoneNumber'] ?? "",
+    );
 
-  final personalEmailController =
-      TextEditingController(
-    text:
-        data['personalEmail'] ?? "",
-  );
+    final personalEmailController = TextEditingController(
+      text: data['personalEmail'] ?? "",
+    );
 
-  final skillSearchController =
-      TextEditingController();
+    final skillSearchController = TextEditingController();
 
-  List<String> filteredSkills =
-      allSkills;
+    List<String> filteredSkills = allSkills;
 
-  String? uploadedCvUrl =
-      data['cvUrl'];
+    String? uploadedCvUrl = data['cvUrl'];
 
-  bool uploadingCV = false;
+    bool uploadingCV = false;
 
-  showDialog(
-    context: context,
+    showDialog(
+      context: context,
 
-    barrierDismissible: false,
+      barrierDismissible: false,
 
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (
-          context,
-          setDialogState,
-        ) {
-          return AlertDialog(
-            title: Text(
-              firstTime
-                  ? "Complete Your Profile"
-                  : "Edit Profile",
-            ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(firstTime ? "Complete Your Profile" : "Edit Profile"),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: MediaQuery.of(context).size.height * 0.75,
 
-            content:
-                SingleChildScrollView(
-              child: Column(
-                children: [
-                  TextField(
-                    controller:
-                        nameController,
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: nameController,
 
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          "Full Name",
-                    ),
-                  ),
-
-                  TextField(
-                    controller:
-                        emailController,
-
-                    enabled: false,
-
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          "Email",
-                    ),
-                  ),
-
-                  DropdownButtonFormField<
-                    String
-                  >(
-                    value:
-                        selectedFaculty,
-
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          "Faculty",
-                    ),
-
-                    items:
-                        faculties.map((
-                      faculty,
-                    ) {
-                      return DropdownMenuItem(
-                        value:
-                            faculty,
-
-                        child:
-                            Text(
-                          faculty,
-                        ),
-                      );
-                    }).toList(),
-
-                    onChanged: (
-                      value,
-                    ) {
-                      setDialogState(() {
-                        selectedFaculty =
-                            value;
-                      });
-                    },
-                  ),
-
-                  TextField(
-                    controller:
-                        majorController,
-
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          "Major",
-                    ),
-                  ),
-
-                  TextField(
-                    controller:
-                        minorController,
-
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          "Minor (Optional)",
-                    ),
-                  ),
-
-                  DropdownButtonFormField<
-                    int
-                  >(
-                    value:
-                        selectedAcademicYear,
-
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          "Academic Year",
-                    ),
-
-                    items:
-                        academicYears.map((
-                      year,
-                    ) {
-                      return DropdownMenuItem(
-                        value:
-                            year,
-
-                        child:
-                            Text(
-                          year == 1
-                              ? "First Year"
-                              : year == 2
-                              ? "Second Year"
-                              : year == 3
-                              ? "Third Year"
-                              : year == 4
-                              ? "Fourth Year"
-                              : "Fifth Year",
-                        ),
-                      );
-                    }).toList(),
-
-                    onChanged: (
-                      value,
-                    ) {
-                      setDialogState(() {
-                        selectedAcademicYear =
-                            value;
-                      });
-                    },
-                  ),
-
-                  TextField(
-                    controller:
-                        cgpaController,
-
-                    keyboardType:
-                        const TextInputType.numberWithOptions(
-                      decimal:
-                          true,
-                    ),
-
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d*\.?\d{0,2}',
+                        decoration: const InputDecoration(
+                          labelText: "Full Name",
                         ),
                       ),
-                    ],
 
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          "CGPA",
-                    ),
-                  ),
+                      TextField(
+                        controller: emailController,
 
-                  TextField(
-                    controller:
-                        phoneController,
+                        enabled: false,
 
-                    keyboardType:
-                        TextInputType.phone,
-
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          "Phone Number",
-                    ),
-                  ),
-
-                  TextField(
-                    controller:
-                        personalEmailController,
-
-                    keyboardType:
-                        TextInputType.emailAddress,
-
-                    decoration:
-                        const InputDecoration(
-                      labelText:
-                          "Personal Email",
-                    ),
-                  ),
-
-                  const SizedBox(
-                    height: 20,
-                  ),
-
-                  Container(
-                    width:
-                        double.infinity,
-
-                    padding:
-                        const EdgeInsets.all(
-                      12,
-                    ),
-
-                    decoration:
-                        BoxDecoration(
-                      border: Border.all(
-                        color:
-                            Colors.grey,
+                        decoration: const InputDecoration(labelText: "Email"),
                       ),
 
-                      borderRadius:
-                          BorderRadius.circular(
-                        12,
+                      DropdownButtonFormField<String>(
+                        value: selectedFaculty,
+
+                        decoration: const InputDecoration(labelText: "Faculty"),
+
+                        items: faculties.map((faculty) {
+                          return DropdownMenuItem(
+                            value: faculty,
+
+                            child: Text(faculty),
+                          );
+                        }).toList(),
+
+                        onChanged: (value) {
+                          setDialogState(() {
+                            selectedFaculty = value;
+                          });
+                        },
                       ),
-                    ),
 
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment
-                              .start,
+                      TextField(
+                        controller: majorController,
 
-                      children: [
-                        const Text(
-                          "CV Upload *",
+                        decoration: const InputDecoration(labelText: "Major"),
+                      ),
 
-                          style:
-                              TextStyle(
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
+                      TextField(
+                        controller: minorController,
+
+                        decoration: const InputDecoration(
+                          labelText: "Minor (Optional)",
+                        ),
+                      ),
+
+                      DropdownButtonFormField<int>(
+                        value: selectedAcademicYear,
+
+                        decoration: const InputDecoration(
+                          labelText: "Academic Year",
                         ),
 
-                        const SizedBox(
-                          height: 10,
-                        ),
+                        items: academicYears.map((year) {
+                          return DropdownMenuItem(
+                            value: year,
 
-                        if (uploadedCvUrl !=
-                            null)
-                          const Text(
-                            "CV uploaded successfully",
-
-                            style:
-                                TextStyle(
-                              color:
-                                  Colors.green,
+                            child: Text(
+                              year == 1
+                                  ? "First Year"
+                                  : year == 2
+                                  ? "Second Year"
+                                  : year == 3
+                                  ? "Third Year"
+                                  : year == 4
+                                  ? "Fourth Year"
+                                  : "Fifth Year",
                             ),
-                          ),
+                          );
+                        }).toList(),
 
-                        const SizedBox(
-                          height: 10,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            selectedAcademicYear = value;
+                          });
+                        },
+                      ),
+
+                      TextField(
+                        controller: cgpaController,
+
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
                         ),
 
-                        ElevatedButton.icon(
-                          onPressed:
-                              uploadingCV
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d{0,2}'),
+                          ),
+                        ],
+
+                        decoration: const InputDecoration(labelText: "CGPA"),
+                      ),
+
+                      TextField(
+                        controller: phoneController,
+
+                        keyboardType: TextInputType.phone,
+
+                        decoration: const InputDecoration(
+                          labelText: "Phone Number",
+                        ),
+                      ),
+
+                      TextField(
+                        controller: personalEmailController,
+
+                        keyboardType: TextInputType.emailAddress,
+
+                        decoration: const InputDecoration(
+                          labelText: "Personal Email",
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      Container(
+                        width: double.infinity,
+
+                        padding: const EdgeInsets.all(12),
+
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+
+                          children: [
+                            const Text(
+                              "CV Upload *",
+
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            if (uploadedCvUrl != null)
+                              const Text(
+                                "CV uploaded successfully",
+
+                                style: TextStyle(color: Colors.green),
+                              ),
+
+                            const SizedBox(height: 10),
+
+                            ElevatedButton.icon(
+                              onPressed: uploadingCV
                                   ? null
                                   : () async {
                                       try {
                                         setDialogState(() {
-                                          uploadingCV =
-                                              true;
+                                          uploadingCV = true;
                                         });
 
-                                        FilePickerResult?
-                                        result =
+                                        FilePickerResult? result =
                                             await FilePicker.platform.pickFiles(
-                                          type:
-                                              FileType.custom,
-                                          withData:
-                                              true,
-                                          allowedExtensions: [
-                                            'pdf',
-                                            'doc',
-                                            'docx',
-                                          ],
-                                        );
+                                              type: FileType.custom,
+                                              withData: true,
+                                              allowedExtensions: [
+                                                'pdf',
+                                                'doc',
+                                                'docx',
+                                              ],
+                                            );
 
-                                        if (result ==
-                                            null) {
+                                        if (result == null) {
                                           setDialogState(() {
-                                            uploadingCV =
-                                                false;
+                                            uploadingCV = false;
                                           });
 
                                           return;
                                         }
 
-                                        Uint8List
-                                        fileBytes =
-                                            result
-                                                .files
-                                                .first
-                                                .bytes!;
+                                        Uint8List fileBytes =
+                                            result.files.first.bytes!;
 
-                                        String
-                                        fileName =
-                                            result
-                                                .files
-                                                .first
-                                                .name;
+                                        String fileName =
+                                            result.files.first.name;
 
-                                        final ref = FirebaseStorage
-                                            .instance
+                                        final ref = FirebaseStorage.instance
                                             .ref()
                                             .child(
                                               'student_cvs/$uid/$fileName',
@@ -512,666 +379,376 @@ Future<void> _showProfileDialog({
                                         await ref.putData(
                                           fileBytes,
                                           SettableMetadata(
-                                            contentType: 'application/pdf'
-                                          )
+                                            contentType: 'application/pdf',
+                                          ),
                                         );
 
-                                        uploadedCvUrl =
-                                            await ref.getDownloadURL();
+                                        uploadedCvUrl = await ref
+                                            .getDownloadURL();
 
                                         setDialogState(() {
-                                          uploadingCV =
-                                              false;
+                                          uploadingCV = false;
                                         });
 
                                         ScaffoldMessenger.of(
-                                                context)
-                                            .showSnackBar(
+                                          context,
+                                        ).showSnackBar(
                                           const SnackBar(
-                                            content:
-                                                Text(
+                                            content: Text(
                                               "CV uploaded successfully",
                                             ),
                                           ),
                                         );
-                                      } catch (
-                                        e
-                                      ) {
+                                      } catch (e) {
                                         setDialogState(() {
-                                          uploadingCV =
-                                              false;
+                                          uploadingCV = false;
                                         });
 
                                         ScaffoldMessenger.of(
-                                                context)
-                                            .showSnackBar(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
-                                            content:
-                                                Text(
-                                              "Upload failed: $e",
-                                            ),
+                                            content: Text("Upload failed: $e"),
                                           ),
                                         );
                                       }
                                     },
 
-                          icon:
-                              const Icon(
-                            Icons.upload_file,
-                          ),
+                              icon: const Icon(Icons.upload_file),
 
-                          label: Text(
-                            uploadingCV
-                                ? "Uploading..."
-                                : "Upload CV",
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(
-                    height: 20,
-                  ),
-
-                  const Align(
-                    alignment:
-                        Alignment.centerLeft,
-
-                    child: Text(
-                      "Club Memberships (Optional)",
-
-                      style: TextStyle(
-                        fontWeight:
-                            FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(
-                    height: 10,
-                  ),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-
-                    children:
-                        _clubNames.map((
-                      club,
-                    ) {
-                      final isSelected =
-                          _selectedClubs
-                              .contains(
-                                club,
-                              );
-
-                      return GestureDetector(
-                        onTap: () {
-                          setDialogState(() {
-                            if (isSelected) {
-                              _selectedClubs
-                                  .remove(
-                                    club,
-                                  );
-                            } else {
-                              _selectedClubs
-                                  .add(
-                                    club,
-                                  );
-                            }
-                          });
-                        },
-
-                        child: Container(
-                          padding:
-                              const EdgeInsets.symmetric(
-                            horizontal:
-                                12,
-
-                            vertical:
-                                8,
-                          ),
-
-                          decoration:
-                              BoxDecoration(
-                            color:
-                                isSelected
-                                ? const Color(
-                                    0xffb1170c,
-                                  )
-                                : Colors
-                                      .grey[200],
-
-                            borderRadius:
-                                BorderRadius.circular(
-                              20,
-                            ),
-                          ),
-
-                          child: Text(
-                            club,
-
-                            style:
-                                TextStyle(
-                              color:
-                                  isSelected
-                                  ? Colors
-                                        .white
-                                  : Colors
-                                        .black,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(
-                    height: 20,
-                  ),
-
-                  const Align(
-                    alignment:
-                        Alignment.centerLeft,
-
-                    child: Text(
-                      "Skills *",
-
-                      style: TextStyle(
-                        fontWeight:
-                            FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(
-                    height: 10,
-                  ),
-
-                  TextField(
-                    controller:
-                        skillSearchController,
-
-                    decoration:
-                        const InputDecoration(
-                      hintText:
-                          "Search skills...",
-
-                      prefixIcon:
-                          Icon(
-                        Icons.search,
-                      ),
-                    ),
-
-                    onChanged: (
-                      value,
-                    ) {
-                      setDialogState(() {
-                        filteredSkills =
-                            allSkills
-                                .where(
-                                  (
-                                    skill,
-                                  ) => skill
-                                      .toLowerCase()
-                                      .contains(
-                                        value
-                                            .toLowerCase(),
-                                      ),
-                                )
-                                .toList();
-                      });
-                    },
-                  ),
-
-                  const SizedBox(
-                    height: 10,
-                  ),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-
-                    children:
-                        filteredSkills.map((
-                      skill,
-                    ) {
-                      final isSelected =
-                          _selectedSkills
-                              .contains(
-                                skill,
-                              );
-
-                      return GestureDetector(
-                        onTap: () {
-                          setDialogState(() {
-                            if (isSelected) {
-                              _selectedSkills
-                                  .remove(
-                                    skill,
-                                  );
-                            } else {
-                              _selectedSkills
-                                  .add(
-                                    skill,
-                                  );
-                            }
-                          });
-                        },
-
-                        child: Container(
-                          padding:
-                              const EdgeInsets.symmetric(
-                            horizontal:
-                                12,
-
-                            vertical:
-                                8,
-                          ),
-
-                          decoration:
-                              BoxDecoration(
-                            color:
-                                isSelected
-                                ? const Color(
-                                    0xffb1170c,
-                                  )
-                                : Colors
-                                      .grey[200],
-
-                            borderRadius:
-                                BorderRadius.circular(
-                              20,
-                            ),
-                          ),
-
-                          child: Text(
-                            skill,
-
-                            style:
-                                TextStyle(
-                              color:
-                                  isSelected
-                                  ? Colors
-                                        .white
-                                  : Colors
-                                        .black,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-
-                  const SizedBox(
-                    height: 20,
-                  ),
-
-                  const Align(
-                    alignment:
-                        Alignment.centerLeft,
-
-                    child: Text(
-                      "Interests *",
-
-                      style: TextStyle(
-                        fontWeight:
-                            FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(
-                    height: 10,
-                  ),
-
-                  TextField(
-                    decoration:
-                        const InputDecoration(
-                      hintText:
-                          "Type interest and press enter",
-                    ),
-
-                    onSubmitted: (
-                      value,
-                    ) {
-                      final trimmed =
-                          value.trim();
-
-                      if (trimmed
-                          .isEmpty)
-                        return;
-
-                      if (!_selectedInterests
-                          .contains(
-                            trimmed,
-                          )) {
-                        setDialogState(() {
-                          _selectedInterests
-                              .add(
-                                trimmed,
-                              );
-                        });
-                      }
-                    },
-                  ),
-
-                  const SizedBox(
-                    height: 10,
-                  ),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-
-                    children:
-                        _selectedInterests.map((
-                      interest,
-                    ) {
-                      return Container(
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal:
-                              12,
-
-                          vertical:
-                              8,
-                        ),
-
-                        decoration:
-                            BoxDecoration(
-                          color:
-                              const Color(
-                                0xffb1170c,
-                              ),
-
-                          borderRadius:
-                              BorderRadius.circular(
-                            20,
-                          ),
-                        ),
-
-                        child: Row(
-                          mainAxisSize:
-                              MainAxisSize
-                                  .min,
-
-                          children: [
-                            Text(
-                              interest,
-
-                              style:
-                                  const TextStyle(
-                                color:
-                                    Colors.white,
-                              ),
-                            ),
-
-                            const SizedBox(
-                              width: 6,
-                            ),
-
-                            GestureDetector(
-                              onTap: () {
-                                setDialogState(() {
-                                  _selectedInterests
-                                      .remove(
-                                        interest,
-                                      );
-                                });
-                              },
-
-                              child:
-                                  const Icon(
-                                Icons.close,
-
-                                size:
-                                    18,
-
-                                color:
-                                    Colors.white,
+                              label: Text(
+                                uploadingCV ? "Uploading..." : "Upload CV",
                               ),
                             ),
                           ],
                         ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
+                      ),
 
-            actions: [
-              ElevatedButton(
-                onPressed: () async {
-                  if (selectedFaculty ==
-                      null) {
-                    ScaffoldMessenger.of(
-                            context)
-                        .showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text(
-                          "Please select a faculty",
+                      const SizedBox(height: 20),
+
+                      const Align(
+                        alignment: Alignment.centerLeft,
+
+                        child: Text(
+                          "Club Memberships (Optional)",
+
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-                    );
 
-                    return;
-                  }
+                      const SizedBox(height: 10),
 
-                  if (selectedAcademicYear ==
-                      null) {
-                    ScaffoldMessenger.of(
-                            context)
-                        .showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text(
-                          "Please select academic year",
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+
+                        children: _clubNames.map((club) {
+                          final isSelected = _selectedClubs.contains(club);
+
+                          return GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                if (isSelected) {
+                                  _selectedClubs.remove(club);
+                                } else {
+                                  _selectedClubs.add(club);
+                                }
+                              });
+                            },
+
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+
+                                vertical: 8,
+                              ),
+
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xffb1170c)
+                                    : Colors.grey[200],
+
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+
+                              child: Text(
+                                club,
+
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.black,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      const Align(
+                        alignment: Alignment.centerLeft,
+
+                        child: Text(
+                          "Skills *",
+
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-                    );
 
-                    return;
-                  }
+                      const SizedBox(height: 10),
 
-                  if (_selectedSkills
-                      .isEmpty) {
-                    ScaffoldMessenger.of(
-                            context)
-                        .showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text(
-                          "Please select at least one skill",
+                      TextField(
+                        controller: skillSearchController,
+
+                        decoration: const InputDecoration(
+                          hintText: "Search skills...",
+
+                          prefixIcon: Icon(Icons.search),
                         ),
-                      ),
-                    );
 
-                    return;
-                  }
-
-                  if (_selectedInterests
-                      .isEmpty) {
-                    ScaffoldMessenger.of(
-                            context)
-                        .showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text(
-                          "Please add at least one interest",
-                        ),
-                      ),
-                    );
-
-                    return;
-                  }
-
-                  if (uploadedCvUrl ==
-                      null) {
-                    ScaffoldMessenger.of(
-                            context)
-                        .showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text(
-                          "Please upload your CV",
-                        ),
-                      ),
-                    );
-
-                    return;
-                  }
-
-                  final cgpa =
-                      double.tryParse(
-                        cgpaController
-                            .text,
-                      );
-
-                  if (cgpa == null ||
-                      cgpa < 0 ||
-                      cgpa > 4) {
-                    ScaffoldMessenger.of(
-                            context)
-                        .showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text(
-                          "CGPA must be between 0 and 4",
-                        ),
-                      ),
-                    );
-
-                    return;
-                  }
-
-                  await FirebaseFirestore
-                      .instance
-                      .collection(
-                        usersCollection,
-                      )
-                      .doc(uid)
-                      .set({
-                        "firstName":
-                            nameController
-                                .text
-                                .trim()
-                                .split(
-                                  " ",
+                        onChanged: (value) {
+                          setDialogState(() {
+                            filteredSkills = allSkills
+                                .where(
+                                  (skill) => skill.toLowerCase().contains(
+                                    value.toLowerCase(),
+                                  ),
                                 )
-                                .first,
+                                .toList();
+                          });
+                        },
+                      ),
 
-                        "lastName":
-                            nameController
-                                        .text
-                                        .trim()
-                                        .split(
-                                          " ",
-                                        )
-                                        .length >
-                                    1
-                                ? nameController
-                                      .text
-                                      .trim()
-                                      .split(
-                                        " ",
-                                      )
-                                      .sublist(
-                                        1,
-                                      )
-                                      .join(
-                                        " ",
-                                      )
-                                : "",
+                      const SizedBox(height: 10),
 
-                        "fullName":
-                            nameController
-                                .text
-                                .trim(),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
 
-                        "email":
-                            emailController
-                                .text,
+                        children: filteredSkills.map((skill) {
+                          final isSelected = _selectedSkills.contains(skill);
 
-                        "faculty":
-                            selectedFaculty,
+                          return GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                if (isSelected) {
+                                  _selectedSkills.remove(skill);
+                                } else {
+                                  _selectedSkills.add(skill);
+                                }
+                              });
+                            },
 
-                        "academicYear":
-                            selectedAcademicYear,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
 
-                        "phoneNumber":
-                            phoneController
-                                .text
-                                .trim(),
+                                vertical: 8,
+                              ),
 
-                        "personalEmail":
-                            personalEmailController
-                                .text
-                                .trim(),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xffb1170c)
+                                    : Colors.grey[200],
 
-                        "major":
-                            majorController
-                                .text
-                                .trim(),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
 
-                        "minor":
-                            minorController
-                                .text
-                                .trim(),
+                              child: Text(
+                                skill,
 
-                        "cgpa":
-                            cgpa,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.black,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
 
-                        "clubs":
-                            _selectedClubs
-                                .toList(),
+                      const SizedBox(height: 20),
 
-                        "skills":
-                            _selectedSkills
-                                .toList(),
+                      const Align(
+                        alignment: Alignment.centerLeft,
 
-                        "interests":
-                            _selectedInterests,
+                        child: Text(
+                          "Interests *",
 
-                        "cvUrl":
-                            uploadedCvUrl,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
 
-                        "profileCompleted":
-                            true,
+                      const SizedBox(height: 10),
 
-                        "updatedAt":
-                            FieldValue.serverTimestamp(),
-                      },
-                      SetOptions(
-                        merge:
-                            true,
-                      ));
+                      TextField(
+                        decoration: const InputDecoration(
+                          hintText: "Type interest and press enter",
+                        ),
 
-                  Navigator.pop(
-                    context,
-                  );
+                        onSubmitted: (value) {
+                          final trimmed = value.trim();
 
-                  setState(() {
-                    _profileFuture =
-                        _fetchFullProfile();
-                  });
-                },
+                          if (trimmed.isEmpty) return;
 
-                child:
-                    const Text(
-                  "Save",
+                          if (!_selectedInterests.contains(trimmed)) {
+                            setDialogState(() {
+                              _selectedInterests.add(trimmed);
+                            });
+                          }
+                        },
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+
+                        children: _selectedInterests.map((interest) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+
+                              vertical: 8,
+                            ),
+
+                            decoration: BoxDecoration(
+                              color: const Color(0xffb1170c),
+
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+
+                              children: [
+                                Text(
+                                  interest,
+
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+
+                                const SizedBox(width: 6),
+
+                                GestureDetector(
+                                  onTap: () {
+                                    setDialogState(() {
+                                      _selectedInterests.remove(interest);
+                                    });
+                                  },
+
+                                  child: const Icon(
+                                    Icons.close,
+
+                                    size: 18,
+
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
+
+              actions: [
+                ElevatedButton(
+                  onPressed: () async {
+                    if (selectedAcademicYear == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Please select academic year"),
+                        ),
+                      );
+
+                      return;
+                    }
+                    final cgpa = cgpaController.text.trim().isEmpty
+                        ? null
+                        : double.tryParse(cgpaController.text);
+
+                    if (cgpa != null && (cgpa < 0 || cgpa > 4)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("CGPA must be between 0 and 4"),
+                        ),
+                      );
+
+                      return;
+                    }
+                    await FirebaseFirestore.instance
+                        .collection(usersCollection)
+                        .doc(uid)
+                        .set({
+                          "firstName": nameController.text
+                              .trim()
+                              .split(" ")
+                              .first,
+
+                          "lastName":
+                              nameController.text.trim().split(" ").length > 1
+                              ? nameController.text
+                                    .trim()
+                                    .split(" ")
+                                    .sublist(1)
+                                    .join(" ")
+                              : "",
+
+                          "fullName": nameController.text.trim(),
+
+                          "email": emailController.text,
+
+                          "faculty": selectedFaculty,
+
+                          "academicYear": selectedAcademicYear,
+
+                          "phoneNumber": phoneController.text.trim(),
+
+                          "personalEmail": personalEmailController.text.trim(),
+
+                          "major": majorController.text.trim(),
+
+                          "minor": minorController.text.trim(),
+
+                          "cgpa": cgpa,
+
+                          "clubs": _selectedClubs.toList(),
+
+                          "skills": _selectedSkills.toList(),
+
+                          "interests": _selectedInterests,
+
+                          "cvUrl": uploadedCvUrl,
+
+                          "profileCompleted": true,
+
+                          "updatedAt": FieldValue.serverTimestamp(),
+                        }, SetOptions(merge: true));
+
+                    Navigator.pop(context);
+
+                    setState(() {
+                      _profileFuture = _fetchFullProfile();
+                    });
+                  },
+
+                  child: const Text("Save"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
   // save updated profile + convert selected skills to list for Firestore
 
   Future<void> _loadSkills() async {
@@ -1389,8 +966,8 @@ Future<void> _showProfileDialog({
                         Icons.star,
                         "CGPA",
                         info['cgpa'] != null
-                        ? info['cgpa'].toString()
-                        : 'Not set',
+                            ? info['cgpa'].toString()
+                            : 'Not set',
                       ),
 
                       const SizedBox(height: 12),
@@ -1590,6 +1167,37 @@ Future<void> _showProfileDialog({
                     },
                   ),
                 ),
+                const SizedBox(height: 10),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(
+                      Icons.work_outline,
+                      color: Color(0xffb1170c),
+                    ),
+                    label: const Text(
+                      "My Applications",
+                      style: TextStyle(color: Color(0xffb1170c)),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: const BorderSide(color: Color(0xffb1170c)),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MyApplicationsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,

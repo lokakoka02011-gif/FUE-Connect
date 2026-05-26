@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fue_connect/widgets/loading_indicator.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,6 +19,7 @@ class _HomePageState extends State<HomePage> {
   int _currentPage = 0;
 
   int notificationCount = 0;
+  final Set<String> _savedPostIds = {};
 
   final List<String> slideshowImages = const [
     "assets/images/slideshow.png",
@@ -255,7 +257,11 @@ class _HomePageState extends State<HomePage> {
 
                       final clubId = data["clubName"] ?? "FUE Connect";
 
-                      return _buildPostCard(data, clubId);
+                      return _buildPostCard(
+                        data,
+                        clubId,
+                        doc.id,
+                      );
                     },
                   );
                 },
@@ -269,7 +275,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildPostCard(Map<String, dynamic> post, String clubId) {
+  Widget _buildPostCard(Map<String, dynamic> post, String clubId, String postId,) {
     String timeDisplay = "Recently";
 
     if (post["createdAt"] != null) {
@@ -278,12 +284,7 @@ class _HomePageState extends State<HomePage> {
       timeDisplay = "${dt.day}/${dt.month} ${dt.hour}:${dt.minute}";
     }
 
-    return GestureDetector(
-      onTap: () {
-        _openPostDetails(post, clubId);
-      },
-
-      child: Container(
+    return Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
 
         decoration: BoxDecoration(
@@ -328,9 +329,50 @@ class _HomePageState extends State<HomePage> {
               ),
 
               subtitle: Text(timeDisplay, style: const TextStyle(fontSize: 12)),
+              trailing: IconButton(
+                icon: Icon(
+                  _savedPostIds.contains(postId)
+                      ? Icons.bookmark
+                      : Icons.bookmark_border,
+                  color: _savedPostIds.contains(postId)
+                      ? const Color(0xffb1170c)
+                      : Colors.grey,
+                ),
 
-              trailing: const Icon(Icons.more_horiz),
-            ),
+                onPressed: () async {
+                  final uid = FirebaseAuth.instance.currentUser?.uid;
+
+                  if (uid == null) return;
+
+                  final savedRef = FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(uid)
+                      .collection('saved_items')
+                      .doc(postId);
+
+                  final doc = await savedRef.get();
+
+                  if (doc.exists) {
+                    await savedRef.delete();
+
+                    setState(() {
+                      _savedPostIds.remove(postId);
+                    });
+                  } else {
+                    await savedRef.set({
+                      'title': post['title'],
+                      'type': 'Post',
+                      'route': '/home',
+                      'savedAt': Timestamp.now(),
+                    });
+
+                    setState(() {
+                      _savedPostIds.add(postId);
+                    });
+                  }
+                },
+              ),
+          ),
 
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -347,23 +389,33 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 10),
 
-            if (post["imageUrl"] != null &&
-                post["imageUrl"].toString().isNotEmpty)
+            if (post["imgUrl"] != null &&
+                post["imgUrl"].toString().isNotEmpty)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(12),
                 ),
 
                 child: Image.network(
-                  post["imageUrl"],
+                  post["imgUrl"],
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      print(error);
+
+                      return Container(
+                        height: 200,
+                        color: Colors.grey,
+                        child: Center(
+                          child: Text(error.toString()),
+                        ),
+                      );
+                    },
                 ),
               ),
           ],
         ),
-      ),
     );
   }
 
@@ -381,55 +433,6 @@ class _HomePageState extends State<HomePage> {
 
         child: Icon(icon, color: Colors.white, size: 24),
       ),
-    );
-  }
-
-  void _openPostDetails(Map<String, dynamic> post, String clubId) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(16),
-
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-
-              children: [
-                Text(
-                  post["title"] ?? "Post",
-
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                Text(
-                  post["content"] ?? "",
-
-                  style: const TextStyle(fontSize: 16),
-                ),
-
-                const SizedBox(height: 15),
-
-                if (post["imageUrl"] != null &&
-                    post["imageUrl"].toString().isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-
-                    child: Image.network(post["imageUrl"]),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }

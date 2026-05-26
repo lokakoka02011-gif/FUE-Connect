@@ -452,13 +452,13 @@ class _InternshipsPageState extends State<InternshipsPage> {
 
                           "studentEmail": userData['email'] ?? "",
 
-                          "studentPhone": userData['phone'] ?? "",
+                          "studentPhone": userData['phoneNumber'] ?? "",
 
                           "faculty": userData['faculty'] ?? "",
 
                           "major": userData['major'] ?? "",
 
-                          "gpa": userData['gpa'] ?? "",
+                          "gpa": userData['cgpa'] ?? "",
 
                           "skills": userData['skills'] ?? [],
 

@@ -27,7 +27,7 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
   String subscriptionPlan = "free";
 
-  int totalPosts = 0;
+  int totalJobs = 0;
   int approvedPosts = 0;
   int rejectedPosts = 0;
   int applicationsCount = 0;
@@ -109,12 +109,13 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
         }
       }
 
-      final postsSnapshot = await FirebaseFirestore.instance
+      final jobsSnapshot = await FirebaseFirestore.instance
           .collection('opportunities')
           .where('createdBy', isEqualTo: currentUser.uid)
+          .where('type', isEqualTo: 'job')
           .get();
 
-      totalPosts = postsSnapshot.docs.where((doc) {
+      totalJobs = jobsSnapshot.docs.where((doc) {
         final status = doc['status'];
         return status != "rejected";
       }).length;
@@ -379,8 +380,8 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
                     childAspectRatio: 0.9,
                     children: [
                       _miniStatCard(
-                        value: totalPosts.toString(),
-                        label: "Posts",
+                        value: totalJobs.toString(),
+                        label: "Jobs",
                         icon: Icons.work,
                         color: fueRed,
                       ),
@@ -439,44 +440,59 @@ class _CompanyDashboardState extends State<CompanyDashboard> {
 
                   const SizedBox(height: 14),
 
-                  _buildDashboardCard(
-                    context: context,
-                    icon: Icons.add_circle_outline,
-                    title: "Add Opportunity",
-                    subtitle:
-                        "Create a new job or internship",
-                    color: Colors.green,
-                    onTap: () {
-                      if (postsLimit != -1 &&
-                          totalPosts >= postsLimit) {
-                        ScaffoldMessenger.of(context)
-                            .showSnackBar(
-                          SnackBar(
-                            backgroundColor: Colors.red,
-                            content: Text(
-                              subscriptionPlan == "free"
-                                  ? "Free plan allows only 1 active post."
-                                  : "You reached your plan limit.",
-                            ),
-                          ),
-                        );
-
-                        return;
-                      }
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const AddEditItemPage(
-                            collectionPath:
-                                'opportunities',
+                _buildDashboardCard(
+                  context: context,
+                  icon: Icons.work,
+                  title: "Add Job",
+                  subtitle: "Create a new job posting",
+                  color: Colors.green,
+                  onTap: () {
+                    if (postsLimit != -1 &&
+                        totalJobs >= postsLimit) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: Colors.red,
+                          content: Text(
+                            subscriptionPlan == "free"
+                                ? "Free plan allows only 1 active job."
+                                : "You reached your plan limit.",
                           ),
                         ),
                       );
-                    },
-                  ),
 
+                      return;
+                    }
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AddEditItemPage(
+                          collectionPath: 'opportunities',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 14),
+
+                _buildDashboardCard(
+                  context: context,
+                  icon: Icons.school,
+                  title: "Add Internship",
+                  subtitle: "Create a new internship",
+                  color: Colors.blue,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AddEditItemPage(
+                          collectionPath: 'opportunities',
+                        ),
+                      ),
+                    );
+                  },
+                ),
                   const SizedBox(height: 14),
 
                   _buildDashboardCard(

@@ -11,10 +11,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   bool notificationsEnabled = true;
 
-  // SHOW / HIDE PASSWORDS
-  bool showCurrentPassword = false;
-  bool showNewPassword = false;
-  bool showConfirmPassword = false;
+
 
   // PASSWORD RULE CHECKER
   bool hasUppercase(String password) {
@@ -42,6 +39,9 @@ class _SettingsPageState extends State<SettingsPage> {
     final confirmPasswordController = TextEditingController();
 
     bool isLoading = false;
+    bool showCurrentPassword = false;
+    bool showNewPassword = false;
+    bool showConfirmPassword = false;
 
     showDialog(
       context: context,
@@ -78,7 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
 
                           onPressed: () {
-                            setState(() {
+                            setDialogState(() {
                               showCurrentPassword = !showCurrentPassword;
                             });
                           },
@@ -111,7 +111,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
 
                           onPressed: () {
-                            setState(() {
+                            setDialogState(() {
                               showNewPassword = !showNewPassword;
                             });
                           },
@@ -140,7 +140,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
 
                           onPressed: () {
-                            setState(() {
+                            setDialogState(() {
                               showConfirmPassword = !showConfirmPassword;
                             });
                           },

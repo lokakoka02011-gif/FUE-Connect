@@ -364,18 +364,86 @@ class _JobsPageState extends State<JobsPage> {
 
                     final userData = userDoc.data();
 
-                    if (userData == null) return;
+                    final List<String> missingFields = [];
 
-                    if ((userData['cvUrl'] ?? '').toString().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "Please upload your CV before applying.",
-                          ),
-                        ),
+                    bool isEmpty(dynamic value) {
+                      return value == null || value.toString().trim().isEmpty;
+                    }
+
+                    if (isEmpty(userData['fullName'])) {
+                      missingFields.add("Full Name");
+                    }
+
+                    if (isEmpty(userData['faculty'])) {
+                      missingFields.add("Faculty");
+                    }
+
+                    if (isEmpty(userData['major'])) {
+                      missingFields.add("Major");
+                    }
+
+                    if (userData['academicYear'] == null) {
+                      missingFields.add("Academic Year");
+                    }
+
+                    if (userData['cgpa'] == null) {
+                      missingFields.add("CGPA");
+                    }
+
+                    if (isEmpty(userData['phoneNumber'])) {
+                      missingFields.add("Phone Number");
+                    }
+
+                    if (isEmpty(userData['personalEmail'])) {
+                      missingFields.add("Personal Email");
+                    }
+                    if (missingFields.isNotEmpty) {
+                      final proceed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text("Incomplete Profile"),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "The following information is missing:",
+                                ),
+
+                                const SizedBox(height: 10),
+
+                                ...missingFields.map(
+                                  (field) => Text("• $field"),
+                                ),
+
+                                const SizedBox(height: 15),
+
+                                const Text(
+                                  "Companies may receive an incomplete application.\n\nDo you want to continue?"
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pop(context, false),
+                                child: const Text("Cancel"),
+                              ),
+
+                              ElevatedButton(
+                                onPressed: () =>
+                                    Navigator.pop(context, true),
+                                child: const Text("Apply Anyway"),
+                              ),
+                            ],
+                          );
+                        },
                       );
 
-                      return;
+                      if (proceed != true) {
+                        return;
+                      }
                     }
 
                     final confirm = await showDialog<bool>(
@@ -453,7 +521,7 @@ class _JobsPageState extends State<JobsPage> {
 
                           "studentEmail": userData['email'] ?? "",
 
-                          "studentPhone": userData['phone'] ?? "",
+                          "studentPhone": userData['phoneNumber'] ?? "",
 
                           "faculty": userData['faculty'] ?? "",
 

@@ -25,7 +25,6 @@ import 'package:fue_connect/screens/features/ChatPage.dart';
 import 'package:fue_connect/screens/features/CampusMapPage.dart';
 import 'package:fue_connect/screens/features/AcademicCalendarPage.dart';
 import 'package:fue_connect/screens/features/SavedItemsPage.dart';
-import 'package:fue_connect/screens/features/formsPage.dart';
 import 'screens/features/settings_page.dart';
 import 'package:fue_connect/screens/features/jobsPage.dart';
 import 'package:fue_connect/screens/features/internshipsPage.dart';
@@ -78,10 +77,6 @@ class MyApp extends StatelessWidget {
         '/jobs': (context) => const JobsPage(),
         '/internships': (context) =>
     const InternshipsPage(),
-        '/forms': (context){
-          final data = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>; 
-          return FormsPage(data: data);
-        }
       },
     );
   }
@@ -185,6 +180,9 @@ class _MainPageState extends State<MainPage> {
                       Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                       Text(email, style: const TextStyle(color: Colors.white70, fontSize: 14)),
                     ],
+
+
+
                   ),
                 );
               },

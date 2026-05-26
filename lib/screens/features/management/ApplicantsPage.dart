@@ -361,7 +361,7 @@ class _ApplicantsPageState extends State<ApplicantsPage> {
                                     _infoRow(
                                       Icons.phone_outlined,
                                       "Phone",
-                                      data['phoneNumber'] ??
+                                      data['studentPhone'] ??
                                           'N/A',
                                     ),
 

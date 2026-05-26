@@ -1,24 +1,25 @@
 import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
-
 import 'package:fue_connect/widgets/loading_indicator.dart';
+import 'package:fue_connect/services/ImageUploadService.dart';
 
 class AddEditItemPage extends StatefulWidget {
   final String collectionPath;
   final String? docId;
   final Map<String, dynamic>? itemData;
+  final String? defaultType;
 
   const AddEditItemPage({
     super.key,
     required this.collectionPath,
     this.docId,
     this.itemData,
+    this.defaultType,
+
   });
 
   @override
@@ -90,8 +91,7 @@ class _AddEditItemPageState
 
   bool isLoading = false;
 
-  File? selectedImage;
-
+  XFile? selectedImage;
   String? existingImageUrl;
 
   List<String> allSkills = [];
@@ -133,7 +133,9 @@ class _AddEditItemPageState
   @override
   void initState() {
     super.initState();
-
+    if (widget.defaultType != null) {
+      selectedType = widget.defaultType!;
+    }
     loadSkills();
     loadCompanyData();
 
@@ -302,29 +304,25 @@ class _AddEditItemPageState
             .get();
 
     setState(() {
-      allSkills =
-          snapshot.docs
-              .map(
-                (doc) =>
-                    doc['name']
-                        .toString(),
-              )
-              .toList();
+      allSkills = snapshot.docs
+        .where((doc) => doc.data().containsKey('name'))
+        .map(
+          (doc) => doc['name'].toString(),
+        )
+        .toList();
     });
   }
 
   // PICK IMAGE
   Future<void> pickImage() async {
-    final pickedFile =
-        await ImagePicker().pickImage(
+    final pickedFile = await ImagePicker().pickImage(
       source: ImageSource.gallery,
       imageQuality: 70,
     );
 
     if (pickedFile != null) {
       setState(() {
-        selectedImage =
-            File(pickedFile.path);
+        selectedImage = pickedFile;
       });
     }
   }
@@ -366,27 +364,11 @@ class _AddEditItemPageState
 
       // UPLOAD IMAGE
       if (selectedImage != null) {
-        final fileName =
-            DateTime.now()
-                .millisecondsSinceEpoch
-                .toString();
-
-        final ref =
-            FirebaseStorage.instance
-                .ref()
-                .child(
-                  widget.collectionPath,
-                )
-                .child(
-                  "$fileName.jpg",
-                );
-
-        await ref.putFile(
+        imageUrl = await ImageUploadService.uploadImage(
           selectedImage!,
+          widget.collectionPath,
         );
-
-        imageUrl =
-            await ref.getDownloadURL();
+        
       }
 
       final currentUser =
@@ -750,22 +732,11 @@ class _AddEditItemPageState
                                             BorderRadius.circular(
                                               12,
                                             ),
+                                            child: Image.network(
+                                              selectedImage!.path,
+                                              fit: BoxFit.cover,
+                                            ),
 
-                                        child:
-                                            kIsWeb
-                                                ? Image.network(
-                                                  selectedImage!
-                                                      .path,
-
-                                                  fit:
-                                                      BoxFit.cover,
-                                                )
-                                                : Image.file(
-                                                  selectedImage!,
-
-                                                  fit:
-                                                      BoxFit.cover,
-                                                ),
                                       )
                                       : existingImageUrl !=
                                                 null &&
@@ -860,58 +831,6 @@ class _AddEditItemPageState
 
                       // OPPORTUNITIES
                       if (isOpportunities) ...[
-                        const SizedBox(
-                          height: 15,
-                        ),
-
-                        DropdownButtonFormField<
-                          String
-                        >(
-                          value:
-                              selectedType,
-
-                          decoration:
-                              const InputDecoration(
-                                labelText:
-                                    "Type",
-
-                                border:
-                                    OutlineInputBorder(),
-                              ),
-
-                          items:
-                              const [
-                                DropdownMenuItem(
-                                  value:
-                                      "internship",
-
-                                  child:
-                                      Text(
-                                        "Internship",
-                                      ),
-                                ),
-
-                                DropdownMenuItem(
-                                  value:
-                                      "job",
-
-                                  child:
-                                      Text(
-                                        "Job",
-                                      ),
-                                ),
-                              ],
-
-                          onChanged: (
-                            value,
-                          ) {
-                            setState(() {
-                              selectedType =
-                                  value!;
-                            });
-                          },
-                        ),
-
                         const SizedBox(
                           height: 15,
                         ),

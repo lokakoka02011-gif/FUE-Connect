@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fue_connect/widgets/loading_indicator.dart';
 import 'package:intl/intl.dart';
-import 'package:fue_connect/main.dart'; 
+import 'package:fue_connect/main.dart';
 import 'package:fue_connect/widgets/filter_pills.dart';
-import 'package:fue_connect/screens/features/formsPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class VolunteerPage extends StatefulWidget {
@@ -18,16 +17,19 @@ class _VolunteerPageState extends State<VolunteerPage> {
   final Set<String> _savedVolunteerIds = {};
   String _searchQuery = "";
   String _selectedArea = "All";
-  final List<String> _impactAreas = ['All', 'Teaching', 'Environment', 'Charity', 'Events'];
+  final List<String> _impactAreas = [
+    'All',
+    'Teaching',
+    'Environment',
+    'Charity',
+    'Events',
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Volunteer Hub'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Volunteer Hub'), elevation: 0),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -35,7 +37,8 @@ class _VolunteerPageState extends State<VolunteerPage> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
-              onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+              onChanged: (value) =>
+                  setState(() => _searchQuery = value.toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Search volunteer roles...',
                 prefixIcon: const Icon(Icons.search, color: Color(0xffb1170c)),
@@ -60,7 +63,7 @@ class _VolunteerPageState extends State<VolunteerPage> {
                 });
               },
             ),
-          ),         
+          ),
           const SizedBox(height: 10),
 
           Expanded(
@@ -69,7 +72,8 @@ class _VolunteerPageState extends State<VolunteerPage> {
                   .collection('volunteering')
                   .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.hasError) return const Center(child: Text("Something went wrong"));
+                if (snapshot.hasError)
+                  return const Center(child: Text("Something went wrong"));
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: LoadingIndicator());
                 }
@@ -77,10 +81,10 @@ class _VolunteerPageState extends State<VolunteerPage> {
                 final docs = snapshot.data!.docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final title = (data['title'] ?? "").toString().toLowerCase();
-                  final area = data['impactArea'] ?? "All"; 
-                  
-                  return title.contains(_searchQuery) && 
-                         (_selectedArea == "All" || area == _selectedArea);
+                  final area = data['impactArea'] ?? "All";
+
+                  return title.contains(_searchQuery) &&
+                      (_selectedArea == "All" || area == _selectedArea);
                 }).toList();
 
                 if (docs.isEmpty) {
@@ -94,11 +98,13 @@ class _VolunteerPageState extends State<VolunteerPage> {
                     var data = docs[index].data() as Map<String, dynamic>;
                     final docId = docs[index].id;
                     bool isSaved = _savedVolunteerIds.contains(docId);
-                    
+
                     // Formating el deadline date
                     String formattedDate = "No Deadline";
                     if (data['deadline'] != null) {
-                      formattedDate = DateFormat('dd MMM yyyy').format((data['deadline'] as Timestamp).toDate());
+                      formattedDate = DateFormat(
+                        'dd MMM yyyy',
+                      ).format((data['deadline'] as Timestamp).toDate());
                     }
 
                     return UniversalConnectCard(
@@ -106,29 +112,46 @@ class _VolunteerPageState extends State<VolunteerPage> {
                       subtitle: "By ${data['companyName'] ?? 'FUE Partner'}",
                       imageUrl: data['imageUrl'],
 
-                    trailing: IconButton(
-                      icon: Icon(
-                        isSaved
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
-                        color: isSaved
-                            ? const Color(0xffb1170c)
-                            : Colors.grey,
+                      trailing: IconButton(
+                        icon: Icon(
+                          isSaved ? Icons.bookmark : Icons.bookmark_border,
+                          color: isSaved
+                              ? const Color(0xffb1170c)
+                              : Colors.grey,
+                        ),
+                        onPressed: () => _toggleSaveVolunteer(docId, data),
                       ),
-                      onPressed: () =>
-                          _toggleSaveVolunteer(docId, data),
-                    ),
 
                       infoRows: [
                         Row(
                           children: [
-                            const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                            const Icon(
+                              Icons.calendar_today,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 5),
-                            Text("Deadline: $formattedDate", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            Text(
+                              "Deadline: $formattedDate",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
                             const Spacer(),
-                            const Icon(Icons.handshake_outlined, size: 14, color: Color(0xffb1170c)),
+                            const Icon(
+                              Icons.handshake_outlined,
+                              size: 14,
+                              color: Color(0xffb1170c),
+                            ),
                             const SizedBox(width: 4),
-                            Text(data['impactArea'] ?? "General", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            Text(
+                              data['impactArea'] ?? "General",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -144,7 +167,7 @@ class _VolunteerPageState extends State<VolunteerPage> {
     );
   }
 
-// show details popup lel volunteer
+  // show details popup lel volunteer
   void _showVolunteerDetails(BuildContext context, Map<String, dynamic> data) {
     showModalBottomSheet(
       context: context,
@@ -161,18 +184,54 @@ class _VolunteerPageState extends State<VolunteerPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)))),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
               const SizedBox(height: 20),
-              Text(data['title'] ?? 'Volunteer Role', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              Text(
+                data['title'] ?? 'Volunteer Role',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 10),
-              Text("Organized by ${data['companyName'] ?? 'FUE Partner'}", style: const TextStyle(color: Color(0xffb1170c), fontWeight: FontWeight.w500)),
+              Text(
+                "Organized by ${data['companyName'] ?? 'FUE Partner'}",
+                style: const TextStyle(
+                  color: Color(0xffb1170c),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const Divider(height: 30),
-              _detailRow(Icons.public, "Impact Area: ", data['impactArea'] ?? "General"),
-              _detailRow(Icons.payments, "Compensation: ", data['pay']?.toString() ?? "Unpaid"),
+              _detailRow(
+                Icons.public,
+                "Impact Area: ",
+                data['impactArea'] ?? "General",
+              ),
+              _detailRow(
+                Icons.payments,
+                "Compensation: ",
+                data['pay']?.toString() ?? "Unpaid",
+              ),
               const SizedBox(height: 20),
-              const Text("About the Role", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text(
+                "About the Role",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
               const SizedBox(height: 8),
-              Text(data['description'] ?? 'Help your community by joining this initiative!', style: TextStyle(color: Colors.grey[800], height: 1.4)),
+              Text(
+                data['description'] ??
+                    'Help your community by joining this initiative!',
+                style: TextStyle(color: Colors.grey[800], height: 1.4),
+              ),
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
@@ -180,25 +239,117 @@ class _VolunteerPageState extends State<VolunteerPage> {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xffb1170c),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => FormsPage(data: data),
-                        ),
-                      );
+
+                  onPressed: () async {
+                    final user = FirebaseAuth.instance.currentUser;
+
+                    if (user == null) return;
+
+                    final userDoc = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .get();
+
+                    final userData = userDoc.data();
+
+                    if (userData == null) return;
+
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text("Confirm Application"),
+
+                          content: const Text(
+                            "You are applying for this volunteering opportunity.\n\n"
+                            "Your profile information will be shared "
+                            "with the organization.\n\n"
+                            "Do you want to continue?",
+                          ),
+
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text("Cancel"),
+                            ),
+
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xffb1170c),
+                              ),
+
+                              onPressed: () => Navigator.pop(context, true),
+
+                              child: const Text(
+                                "Apply",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+
+                    if (confirm != true) return;
+
+                    await FirebaseFirestore.instance
+                        .collection('volunteer_applications')
+                        .add({
+                          "studentId": user.uid,
+
+                          "studentName": userData['fullName'] ?? "",
+
+                          "studentEmail": userData['email'] ?? "",
+
+                          "studentPhone": userData['phone'] ?? "",
+
+                          "faculty": userData['faculty'] ?? "",
+
+                          "major": userData['major'] ?? "",
+
+                          "gpa": userData['gpa'] ?? "",
+
+                          "skills": userData['skills'] ?? [],
+
+                          "profileImage": userData['profileImage'] ?? "",
+
+                          "volunteerTitle": data['title'] ?? "",
+
+                          "organization": data['companyName'] ?? "",
+
+                          "applicationStatus": "pending",
+
+                          "appliedAt": Timestamp.now(),
+                        });
+
+                    Navigator.pop(context);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: Colors.green,
+                        content: Text("Application submitted successfully."),
+                      ),
+                    );
                   },
-                  child: const Text("Apply to Volunteer", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    "Apply to Volunteer",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
             ],
           ),
         ),
-      )
+      ),
     );
   }
 
@@ -238,7 +389,8 @@ class _VolunteerPageState extends State<VolunteerPage> {
       });
     }
   }
-// row feh icon + label + value
+
+  // row feh icon + label + value
   Widget _detailRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),

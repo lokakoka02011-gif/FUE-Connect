@@ -43,7 +43,6 @@ dependencies:
   shared_preferences: ^2.2.2
   carousel_slider: ^4.2.1 
   table_calendar: ^3.0.9
-  font_awesome_flutter: ^10.7.0
   fl_chart: ^0.68.0
   file_picker: ^8.0.7
 dev_dependencies:

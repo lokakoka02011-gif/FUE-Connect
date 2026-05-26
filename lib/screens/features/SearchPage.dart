@@ -4,7 +4,8 @@ import 'package:fue_connect/widgets/loading_indicator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-import 'package:fue_connect/screens/features/OpportunitiesPage.dart';
+import 'package:fue_connect/screens/features/jobsPage.dart';
+import 'package:fue_connect/screens/features/internshipsPage.dart';
 import 'package:fue_connect/screens/features/ClubsPage.dart';
 import 'package:fue_connect/screens/features/EventsPage.dart';
 import 'package:fue_connect/screens/features/VolunteerPage.dart';
@@ -30,10 +31,16 @@ class _SearchPageState extends State<SearchPage> {
 
   List<String> _recentSearches = [];
 
-  bool _isLoading = false;
   bool _isSearchFocused = false;
+  bool _isLoading = false;
 
-  final List<String> _categories = ["All", "Clubs", "Events", "Opportunity"];
+  final List<String> _categories = [
+    "All",
+    "Clubs",
+    "Events",
+    "Jobs",
+    "Internships",
+  ];
 
   @override
   void initState() {
@@ -98,8 +105,10 @@ class _SearchPageState extends State<SearchPage> {
       for (var doc in eventSnap.docs) {
         var data = doc.data();
 
-        data['displayTitle'] = data['name'];
-
+        data['displayTitle'] =
+            data['name'] ??
+            data['title'] ??
+            "Untitled";
         data['origin'] = 'Events';
         data['docId'] = doc.id;
 
@@ -124,15 +133,23 @@ class _SearchPageState extends State<SearchPage> {
 
       var oppSnap = await FirebaseFirestore.instance
           .collection('Opportunity')
-          .limit(2)
           .get();
 
       for (var doc in oppSnap.docs) {
         var data = doc.data();
 
+        String type =
+            (data['type'] ?? "").toString().toLowerCase();
+
         data['displayTitle'] = data['Title'];
 
-        data['origin'] = 'Opportunity';
+        if (type == "job") {
+          data['origin'] = 'Jobs';
+        } else if (type == "internship") {
+          data['origin'] = 'Internships';
+        } else {
+          continue;
+        }
 
         data['docId'] = doc.id;
 
@@ -253,9 +270,12 @@ class _SearchPageState extends State<SearchPage> {
           }
         }
       }
+            
+      // Search Jobs & Internships
+      if (_selectedCategory == "All" ||
+          _selectedCategory == "Jobs" ||
+          _selectedCategory == "Internships") {
 
-      // Search Opportunities
-      if (_selectedCategory == "All" || _selectedCategory == "Opportunity") {
         var oppSnap = await FirebaseFirestore.instance
             .collection('Opportunity')
             .get();
@@ -263,12 +283,30 @@ class _SearchPageState extends State<SearchPage> {
         for (var doc in oppSnap.docs) {
           var data = doc.data();
 
-          String title = (data['Title'] ?? "").toString().toLowerCase();
+          String title =
+              (data['Title'] ?? "").toString().toLowerCase();
+
+          String type =
+              (data['type'] ?? "").toString().toLowerCase();
 
           if (title.contains(_searchQuery)) {
+
+            if (_selectedCategory == "Jobs" &&
+                type != "job") {
+              continue;
+            }
+
+            if (_selectedCategory == "Internships" &&
+                type != "internship") {
+              continue;
+            }
+
             data['displayTitle'] = data['Title'];
 
-            data['origin'] = 'Opportunity';
+            data['origin'] =
+                type == "job"
+                    ? "Jobs"
+                    : "Internships";
 
             data['docId'] = doc.id;
 
@@ -276,6 +314,7 @@ class _SearchPageState extends State<SearchPage> {
           }
         }
       }
+
     } catch (e) {
       debugPrint("Search Error: $e");
     }
@@ -287,36 +326,45 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
-  void _handleNavigation(Map<String, dynamic> item) {
-    _saveRecentSearch(_searchController.text);
+    void _handleNavigation(Map<String, dynamic> item) {
 
-    Widget destination;
+      _saveRecentSearch(_searchController.text);
 
-    switch (item['origin']) {
-      case 'Clubs':
-        destination = const ClubsPage();
-        break;
+      Widget destination;
 
-      case 'Events':
-        destination = const EventsPage();
-        break;
+      switch (item['origin']) {
 
-      case 'Volunteer':
-        destination = const VolunteerPage();
-        break;
+        case 'Clubs':
+          destination = const ClubsPage();
+          break;
 
-      case 'Opportunity':
-      default:
-        destination = const OpportunitiesPage();
-        break;
+        case 'Events':
+          destination = const EventsPage();
+          break;
+
+        case 'Volunteer':
+          destination = const VolunteerPage();
+          break;
+
+        case 'Jobs':
+          destination = const JobsPage();
+          break;
+
+        case 'Internships':
+          destination = const InternshipsPage();
+          break;
+
+        default:
+          return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => destination,
+        ),
+      );
     }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => destination),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     const Color fueRed = Color(0xffb1170c);
@@ -325,9 +373,19 @@ class _SearchPageState extends State<SearchPage> {
       backgroundColor: Colors.white,
 
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+
         title: const Text("Search FUE Connect"),
+
         elevation: 0,
+
         backgroundColor: fueRed,
+
         foregroundColor: Colors.white,
       ),
 
@@ -378,7 +436,6 @@ class _SearchPageState extends State<SearchPage> {
                   ),
                 ),
 
-                if (_isSearchFocused) ...[
                   const SizedBox(height: 14),
 
                   SizedBox(
@@ -397,17 +454,14 @@ class _SearchPageState extends State<SearchPage> {
 
                         final isSelected = _selectedCategory == category;
 
-                        return GestureDetector(
+                        return GestureDetector(                                                    
                           onTap: () {
                             setState(() {
                               _selectedCategory = category;
                             });
 
-                            if (_searchQuery.isNotEmpty) {
-                              _performSearch(_searchController.text);
-                            }
+                            _performSearch(_searchController.text);
                           },
-
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
@@ -437,7 +491,6 @@ class _SearchPageState extends State<SearchPage> {
                     ),
                   ),
                 ],
-              ],
             ),
           ),
 
@@ -524,9 +577,19 @@ class _SearchPageState extends State<SearchPage> {
         icon = Icons.event;
         break;
 
-      default:
+      case 'Jobs':
         originColor = Colors.green;
         icon = Icons.work;
+        break;
+
+      case 'Internships':
+        originColor = Colors.purple;
+        icon = Icons.school;
+        break;
+
+      default:
+        originColor = Colors.grey;
+        icon = Icons.star;
     }
 
     return ListTile(
@@ -642,29 +705,91 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildRecommendedSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    Widget _buildRecommendedSection() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
 
-      children: [
-        if (_recentlyViewed.isNotEmpty) ...[
+        children: [
+          if (_recentlyViewed.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
+
+              child: Text(
+                "Recently Viewed",
+
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+
+            ..._recentlyViewed.map(
+              (item) => _buildResultTile(item, isRecent: true),
+            ),
+
+            const SizedBox(height: 20),
+          ],
+
           const Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
+            padding: EdgeInsets.fromLTRB(20, 10, 20, 10),
 
             child: Text(
-              "Recently Viewed",
+              "Recommended For You",
 
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
 
-          ..._recentlyViewed.map(
-            (item) => _buildResultTile(item, isRecent: true),
-          ),
+          ..._recommendedItems.map((item) {
+            Color color;
+            IconData icon;
+
+            switch (item['origin']) {
+              case 'Clubs':
+                color = Colors.blue;
+                icon = Icons.groups;
+                break;
+
+              case 'Events':
+                color = Colors.orange;
+                icon = Icons.event;
+                break;
+
+              case 'Jobs':
+                color = Colors.green;
+                icon = Icons.work;
+                break;
+
+              case 'Internships':
+                color = Colors.purple;
+                icon = Icons.school;
+                break;
+
+              default:
+                color = Colors.grey;
+                icon = Icons.star;
+            }
+
+            return GestureDetector(
+              onTap: () {
+                _handleNavigation(item);
+              },
+
+              child: _buildRecommendationCard(
+                title: item['displayTitle'] ?? "Untitled",
+                category: item['origin'],
+                color: color,
+                icon: icon,
+              ),
+            );
+          }).toList(),
         ],
-      ],
-    );
-  }
+      );
+    }
 
   Widget _buildNoResultsState() {
     return Center(
